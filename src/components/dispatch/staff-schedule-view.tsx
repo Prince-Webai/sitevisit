@@ -15,19 +15,32 @@ const VIEWS = ['Day', 'Week', '2 weeks', 'Month'] as const;
 
 interface StaffScheduleViewProps {
   onJobClick: (jobId: string) => void;
-  refreshKey?: number;
   onScheduleUpdate?: () => void;
 }
 
-export function StaffScheduleView({ onJobClick, refreshKey, onScheduleUpdate }: StaffScheduleViewProps) {
+import { useDispatchData } from '@/components/providers/dispatch-provider';
+
+export function StaffScheduleView({ onJobClick, onScheduleUpdate }: StaffScheduleViewProps) {
   const { user, profile, loading: authLoading } = useAuth();
+  const { jobs, staffProfiles, loading: providerLoading, refresh } = useDispatchData();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [view, setView]                 = useState<string>('Day');
   const [dragOverRow, setDragOverRow]   = useState<string | null>(null);
   const [dragSlot, setDragSlot]         = useState<number | null>(null);
-  const [jobs, setJobs]                 = useState<Job[]>([]);
-  const [staffMembers, setStaffMembers] = useState<any[]>([]);
-  const [loading, setLoading]           = useState(false);
+  
+  const staffMembers = useMemo(() => {
+    const seen = new Set();
+    return (staffProfiles || [])
+      .filter((p: any) => ['Engineer', 'Technician'].includes(p.role)) // Only show Engineers/Technicians
+      .filter((p: any) => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
+  }, [staffProfiles]);
+
+  const loading = providerLoading || authLoading;
+
   const gridRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -70,38 +83,7 @@ export function StaffScheduleView({ onJobClick, refreshKey, onScheduleUpdate }: 
   const COL_WIDTH = isTimeView ? 90 : 120;
   const STAFF_COL_W = 100; // Reduced for mobile
 
-  useEffect(() => {
-    async function loadData() {
-      if (!user || !profile) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      try {
-        const [jobsData, profilesData] = await Promise.all([
-          jobService.fetchJobs({
-            role: profile.role,
-            userId: user.id
-          }),
-          jobService.fetchStaffProfiles()
-        ]);
-        
-        setJobs(jobsData);
-        const seen = new Set();
-        const unique = (profilesData || []).filter((p: any) => {
-          if (seen.has(p.id)) return false;
-          seen.add(p.id);
-          return true;
-        });
-        setStaffMembers(unique);
-      } catch (error) {
-        console.error('Failed to load schedule data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (!authLoading) loadData();
-  }, [refreshKey, user, profile, authLoading]);
+
 
   const dateLabelShort = selectedDate.toLocaleDateString('en-IN', {
     day: 'numeric', month: 'short'
@@ -174,7 +156,7 @@ export function StaffScheduleView({ onJobClick, refreshKey, onScheduleUpdate }: 
         });
       }
 
-      setJobs(await jobService.fetchJobs());
+      refresh();
       toast.success(`Assigned at ${col.label}`);
       onScheduleUpdate?.();
     } catch (err) {
@@ -210,7 +192,7 @@ export function StaffScheduleView({ onJobClick, refreshKey, onScheduleUpdate }: 
   const removeAssignment = async (jobId: string) => {
     try {
       await jobService.updateJob(jobId, { assigned_to: null as any, scheduled_date: null as any });
-      setJobs(await jobService.fetchJobs());
+      refresh();
       toast.success('Assignment removed');
       onScheduleUpdate?.();
     } catch {

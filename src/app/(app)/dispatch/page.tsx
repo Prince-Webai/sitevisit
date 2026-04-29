@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Plus, Package, Clock, Wrench,
+  Plus, Package, Clock, Wrench, X,
   Map, ListChecks, CalendarDays, Users, Layers, Loader2
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -31,15 +31,24 @@ type TabId = (typeof TABS)[number]['id'];
 
 
 
+import { DispatchProvider, useDispatchData } from '@/components/providers/dispatch-provider';
+
 export default function DispatchPage() {
+  return (
+    <DispatchProvider>
+      <DispatchContent />
+    </DispatchProvider>
+  );
+}
+
+function DispatchContent() {
   const { user, profile, loading: authLoading } = useAuth();
+  const { staffLocations, loading: dataLoading, refresh: handleRefresh, error } = useDispatchData();
   const [activeTab,      setActiveTab]      = useState<TabId>('schedules');
   const [jobModalOpen,   setJobModalOpen]   = useState(false);
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [addStaffOpen,   setAddStaffOpen]   = useState(false);
   const [selectedJobId,  setSelectedJobId]  = useState<string | undefined>();
-  const [refreshKey,     setRefreshKey]     = useState(0);
-  const [staffMembers,   setStaffMembers]   = useState<any[]>([]);
   const supabase = createClient();
 
   const isAdminOrSales = ['Admin', 'Sales', 'Dispatcher'].includes(profile?.role || '');
@@ -53,36 +62,36 @@ export default function DispatchPage() {
     }
   }, [profile, activeTab, isEngineer]);
 
-  useEffect(() => {
-    async function loadStaff() {
-      if (!user || !profile) return;
-      const supabase = createClient();
-      let query = supabase.from('profiles').select('id, full_name, role');
-      if (isEngineer) {
-        query = query.eq('id', user.id);
-      } else {
-        query = query.in('role', ['Technician', 'Engineer', 'Dispatcher']);
-      }
-      const { data } = await query;
-      setStaffMembers(data || []);
-    }
-    if (!authLoading) loadStaff();
-  }, [refreshKey, user, profile, authLoading, isEngineer]);
-
-  const handleRefresh = () => setRefreshKey(prev => prev + 1);
-
   const handleJobDoubleClick = (jobId: string) => {
     setSelectedJobId(jobId);
     setJobModalOpen(true);
   };
 
-  if (authLoading) {
+  if (authLoading || dataLoading) {
     return (
       <div className="h-full flex items-center justify-center bg-off-white/30">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-red-50/30 p-6 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-4">
+          <X className="w-8 h-8" />
+        </div>
+        <h2 className="text-lg font-bold text-charcoal mb-2">Failed to Load Dispatch Data</h2>
+        <p className="text-sm text-mid-gray mb-6 max-w-md">{error}</p>
+        <Button onClick={handleRefresh} className="bg-primary hover:bg-primary-dark">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // Extract profiles from staffLocations for the top bar avatars
+  const staffMembers = staffLocations.map(loc => loc.profile).filter(Boolean);
 
   return (
     <>
@@ -112,9 +121,9 @@ export default function DispatchPage() {
             <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 justify-end md:justify-start">
               <div className="flex items-center -space-x-2 overflow-hidden">
                 {staffMembers.slice(0, 3).map(s => (
-                  <Avatar key={s.id} className="w-7 h-7 md:w-8 md:h-8 border-2 border-white shadow-sm ring-1 ring-light-gray/50">
+                  <Avatar key={s?.id} className="w-7 h-7 md:w-8 md:h-8 border-2 border-white shadow-sm ring-1 ring-light-gray/50">
                     <AvatarFallback className="bg-primary/10 text-primary text-[9px] md:text-[10px] font-bold">
-                      {s.full_name.split(' ').map((n: string) => n[0]).join('')}
+                      {s?.full_name?.split(' ').map((n: string) => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
                 ))}
@@ -161,15 +170,15 @@ export default function DispatchPage() {
         {/* ── Main View Content ── */}
         <div className="flex flex-1 min-h-0 overflow-hidden relative">
           <div className="flex-1 min-w-0 overflow-auto bg-off-white/20">
-            {activeTab === 'map'       && <DispatchMap refreshKey={refreshKey} onNewJob={() => setBookDialogOpen(true)} />}
-            {activeTab === 'tasks'     && <TasksView refreshKey={refreshKey} onJobClick={handleJobDoubleClick} />}
-            {activeTab === 'calendar'  && <CalendarView refreshKey={refreshKey} onJobClick={handleJobDoubleClick} />}
-            {activeTab === 'schedules' && <StaffScheduleView refreshKey={refreshKey} onJobClick={handleJobDoubleClick} onScheduleUpdate={handleRefresh} />}
+            {activeTab === 'map'       && <DispatchMap onNewJob={() => setBookDialogOpen(true)} />}
+            {activeTab === 'tasks'     && <TasksView onJobClick={handleJobDoubleClick} />}
+            {activeTab === 'calendar'  && <CalendarView onJobClick={handleJobDoubleClick} />}
+            {activeTab === 'schedules' && <StaffScheduleView onJobClick={handleJobDoubleClick} onScheduleUpdate={handleRefresh} />}
           </div>
 
           {/* Jobs Panel (Desktop Only) */}
           <div className="hidden lg:block">
-            <JobsPanel onJobDoubleClick={handleJobDoubleClick} refreshKey={refreshKey} />
+            <JobsPanel onJobDoubleClick={handleJobDoubleClick} />
           </div>
 
           {/* Mobile Drawer Toggle */}
@@ -184,7 +193,7 @@ export default function DispatchPage() {
             </SheetTrigger>
             <SheetContent side="right" className="p-0 w-[300px] max-w-[85vw] border-none">
               <div className="h-full pt-10">
-                <JobsPanel onJobDoubleClick={handleJobDoubleClick} refreshKey={refreshKey} />
+                <JobsPanel onJobDoubleClick={handleJobDoubleClick} />
               </div>
             </SheetContent>
           </Sheet>
@@ -197,3 +206,4 @@ export default function DispatchPage() {
     </>
   );
 }
+

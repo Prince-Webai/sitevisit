@@ -8,28 +8,11 @@ interface TasksViewProps {
   refreshKey?: number;
 }
 
-export function TasksView({ onJobClick, refreshKey }: TasksViewProps) {
-  const { user, profile, loading: authLoading } = useAuth();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+import { useDispatchData } from '@/components/providers/dispatch-provider';
 
-  useEffect(() => {
-    async function loadJobs() {
-      if (!user || !profile) return;
-      try {
-        const data = await jobService.fetchJobs({
-          role: profile.role,
-          userId: user.id
-        });
-        setJobs(data);
-      } catch (error) {
-        console.error('Failed to load tasks:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (!authLoading) loadJobs();
-  }, [refreshKey, user, profile, authLoading]);
+export function TasksView({ onJobClick }: TasksViewProps) {
+  const { jobs, loading } = useDispatchData();
+
 
   const jobsWithTasks = jobs.filter(j =>
     !['Completed', 'Cancelled', 'Archived'].includes(j.status)

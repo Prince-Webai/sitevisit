@@ -38,39 +38,17 @@ const createJobIcon = (isCaptured: boolean) => `data:image/svg+xml;charset=UTF-8
 </svg>
 `)}`;
 
-export function DispatchMap({ onNewJob, refreshKey }: { onNewJob: () => void; refreshKey?: number }) {
-  const { user, profile, loading: authLoading } = useAuth();
+import { useDispatchData } from '@/components/providers/dispatch-provider';
+
+export function DispatchMap({ onNewJob }: { onNewJob: () => void }) {
+  const { jobs, staffLocations } = useDispatchData();
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
   });
 
-  const [staffLocations, setStaffLocations] = useState<StaffLocation[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<StaffLocation | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      if (!user || !profile) return;
-      try {
-        const [jobsData, staffData] = await Promise.all([
-          jobService.fetchJobs({ role: profile.role, userId: user.id }),
-          jobService.fetchStaffLocations()
-        ]);
-        setJobs(jobsData);
-        
-        // Filter staff locations: Engineers only see themselves
-        const filteredStaff = (profile.role === 'Engineer' || profile.role === 'Technician')
-          ? (staffData as StaffLocation[]).filter(s => s.profile_id === user.id)
-          : (staffData as StaffLocation[]);
-          
-        setStaffLocations(filteredStaff);
-      } catch (error) {
-        console.error('Failed to load map data:', error);
-      }
-    }
-    if (isLoaded && !authLoading) loadData();
-  }, [isLoaded, refreshKey, user, profile, authLoading]);
 
   if (loadError) {
     return (

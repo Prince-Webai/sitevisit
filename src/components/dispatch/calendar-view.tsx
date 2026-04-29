@@ -75,28 +75,13 @@ function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect
   );
 }
 
-export function CalendarView({ refreshKey, onJobClick }: { refreshKey?: number; onJobClick?: (id: string) => void }) {
-  const { user, profile, loading: authLoading } = useAuth();
+import { useDispatchData } from '@/components/providers/dispatch-provider';
+
+export function CalendarView({ onJobClick }: { onJobClick?: (id: string) => void }) {
+  const { jobs, loading } = useDispatchData();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [view, setView] = useState<ViewType>('Day');
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadJobs() {
-      if (!user || !profile) return;
-      setLoading(true);
-      try {
-        const data = await jobService.fetchJobs({ role: profile.role, userId: user.id });
-        setJobs(data);
-      } catch (error) {
-        console.error('Failed to load jobs:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (!authLoading) loadJobs();
-  }, [refreshKey, user, profile, authLoading]);
 
   const dayLabelFull = selectedDate.toLocaleDateString('en-AU', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   const dayLabelShort = selectedDate.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' });

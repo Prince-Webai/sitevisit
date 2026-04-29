@@ -395,7 +395,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
                 const newClient = await jobService.createClient({
                   first_name: names[0] || 'Unknown',
                   last_name: names.slice(1).join(' ') || 'Client',
-                  email: contactEmail || null,
+                  email: contactEmail || undefined,
                   phone: contactPhone,
                   mobile: contactMobile,
                   address: address
@@ -419,8 +419,8 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
                 contact_email: contactEmail,
                 contact_phone: contactPhone,
                 contact_mobile: contactMobile,
-                assigned_to: assignedTo,
-                scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : null,
+                assigned_to: assignedTo || undefined,
+                scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
                 billing_same_as_job: billingSameAsJob
               };
 

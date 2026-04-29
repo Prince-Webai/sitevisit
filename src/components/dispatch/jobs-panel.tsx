@@ -78,32 +78,13 @@ function JobCard({ job, onDoubleClick }: { job: Job; onDoubleClick: () => void }
   );
 }
 
-export function JobsPanel({ onJobDoubleClick, refreshKey }: JobsPanelProps) {
-  const { user, profile, loading: authLoading } = useAuth();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+import { useDispatchData } from '@/components/providers/dispatch-provider';
+
+export function JobsPanel({ onJobDoubleClick }: JobsPanelProps) {
+  const { jobs, loading } = useDispatchData();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All Jobs');
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadJobs() {
-      if (!user || !profile) return;
-      try {
-        const data = await jobService.fetchJobs({
-          role: profile.role,
-          userId: user.id
-        });
-        if (isMounted) setJobs(data);
-      } catch (error) {
-        console.error('Failed to load jobs');
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    if (!authLoading) loadJobs();
-    return () => { isMounted = false; };
-  }, [refreshKey, user, profile, authLoading]);
 
   const filteredJobs = jobs.filter(j => {
     if (filter === 'Quotes' && j.status !== 'Lead') return false;

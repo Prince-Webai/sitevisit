@@ -5,6 +5,7 @@ import { Package, Clock, Wrench, MapPin, Loader2, ChevronRight } from 'lucide-re
 import { Badge } from '@/components/ui/badge';
 import { jobService } from '@/lib/supabase/service';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useDispatchData } from '@/components/providers/dispatch-provider';
 import type { Job } from '@/lib/types';
 
 interface QueuesViewProps {
@@ -36,30 +37,12 @@ function QueueJobCard({ job, onClick }: { job: Job; onClick: () => void }) {
   );
 }
 
-export function QueuesView({ onJobClick, refreshKey }: QueuesViewProps) {
-  const { user, profile, loading: authLoading } = useAuth();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+export function QueuesView({ onJobClick }: QueuesViewProps) {
+  const { jobs, loading: providerLoading } = useDispatchData();
+  const { loading: authLoading } = useAuth();
   const [activeQueue, setActiveQueue] = useState(0);
 
-  useEffect(() => {
-    async function loadData() {
-      if (!user || !profile) return;
-      setLoading(true);
-      try {
-        const data = await jobService.fetchJobs({
-          role: profile.role,
-          userId: user.id
-        });
-        setJobs(data);
-      } catch (error) {
-        console.error('Failed to load queues data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (!authLoading) loadData();
-  }, [refreshKey, user, profile, authLoading]);
+  const loading = providerLoading || authLoading;
 
   const partsOnOrder = jobs.filter(j => j.materials_status === 'Pending' || j.materials_status === 'Ordered');
   const pendingQuotes = jobs.filter(j => j.status === 'Lead');

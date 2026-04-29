@@ -15,7 +15,7 @@ interface SearchResult {
   id: string;
   type: 'job' | 'client' | 'address';
   title: string;
-  subtitle: string;
+  subtitle?: string;
   href: string;
 }
 

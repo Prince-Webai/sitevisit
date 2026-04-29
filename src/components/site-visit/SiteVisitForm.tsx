@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, ChevronLeft, Save, 
-  User, MapPin, Camera, Sun, 
-  Zap, ShieldCheck, CheckCircle2 
+  User, Camera, Sun, 
+  Zap, ShieldCheck, CheckCircle2,
+  BookMarked, RotateCcw, Loader2, Clock
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { useTranslation } from 'react-i18next';
@@ -25,8 +26,6 @@ import { createClient } from '@/lib/supabase/client';
 import { siteVisitService } from '@/lib/supabase/site-visit-service';
 import { jobService } from '@/lib/supabase/service';
 import type { SiteVisitData } from '@/types/site-visit';
-import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
 
 const STEPS = [
   { id: 1, title: 'Client & Context', icon: User },
@@ -37,12 +36,21 @@ const STEPS = [
   { id: 6, title: 'Declaration & Submission', icon: CheckCircle2 },
 ];
 
+// Draft key per job — stored in localStorage for offline resilience
+function getDraftKey(jobId?: string) {
+  return jobId ? `tn_sv_draft_${jobId}` : 'tn_sv_draft_new';
+}
+
 export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?: () => void }) {
   const { t, i18n } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreLoading, setIsPreLoading] = useState(!!jobId);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const signatureRef = useRef<SignatureCanvas>(null);
   const supabase = createClient();
+  const draftKey = getDraftKey(jobId);
 
   const methods = useForm<SiteVisitData>({
     defaultValues: {
@@ -56,37 +64,102 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
 
   const { watch, setValue, handleSubmit, reset, formState: { errors } } = methods;
 
+  // ── 1. Check localStorage for a draft immediately on mount (sync/instant) ──
+  useEffect(() => {
+    const saved = localStorage.getItem(draftKey);
+    if (saved) {
+      try {
+        JSON.parse(saved); // validate it's parseable
+        setShowDraftBanner(true); // show banner, let user decide
+      } catch {
+        localStorage.removeItem(draftKey);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── 2. Load DB data (async) ──
   useEffect(() => {
     async function loadData() {
       if (!jobId) return;
+      setIsPreLoading(true);
       try {
-        // 1. Try to load existing site visit
+        // Try to load existing completed site visit from DB
         const existingData = await siteVisitService.fetchByJobId(jobId);
         if (existingData) {
-          reset(existingData);
+          // DB record exists — only reset if user hasn't restored a draft
+          if (!showDraftBanner) reset(existingData);
           return;
         }
 
-        // 2. If no site visit yet, pre-fill from job/client data
+        // No site visit yet — pre-fill from job/client data
         const job = await jobService.fetchJobById(jobId);
         if (job) {
           setValue('clientName', `${job.client?.first_name || ''} ${job.client?.last_name || ''}`.trim() || 'Valued Client');
           setValue('clientPhone', job.client?.phone || job.client?.mobile || '');
           setValue('siteAddress', job.address || '');
-          
-          // Also pre-fill GPS if job has it
           if (job.latitude && job.longitude) {
             setValue('siteGps', { lat: Number(job.latitude), lng: Number(job.longitude) });
           }
         }
       } catch (error) {
         console.error('Failed to load site visit or job data:', error);
+      } finally {
+        setIsPreLoading(false);
       }
     }
     loadData();
-  }, [jobId, reset, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]);
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 6));
+  // ── 3. Auto-save form to localStorage on every change ──
+  useEffect(() => {
+    if (isPreLoading) return; // don't save while loading
+    const subscription = methods.watch((values) => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(values));
+        setLastSaved(new Date());
+      } catch { /* storage quota exceeded — ignore */ }
+    });
+    return () => subscription.unsubscribe();
+  }, [isPreLoading, draftKey, methods]);
+
+  // ── Draft helpers ──
+  const restoreDraft = useCallback(() => {
+    const saved = localStorage.getItem(draftKey);
+    if (saved) {
+      try {
+        reset(JSON.parse(saved));
+        toast.success('Draft restored! Continue where you left off.');
+      } catch {
+        toast.error('Could not restore draft.');
+      }
+    }
+    setShowDraftBanner(false);
+  }, [draftKey, reset]);
+
+  const discardDraft = useCallback(() => {
+    localStorage.removeItem(draftKey);
+    setShowDraftBanner(false);
+    toast('Draft discarded.');
+  }, [draftKey]);
+
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(draftKey);
+    setLastSaved(null);
+  }, [draftKey]);
+
+  const nextStep = async () => {
+    // Validate required fields before leaving Step 1
+    if (currentStep === 1) {
+      const valid = await methods.trigger(['clientName', 'clientPhone', 'siteAddress']);
+      if (!valid) {
+        toast.error('Please fill in all required fields before continuing.');
+        return;
+      }
+    }
+    setCurrentStep(prev => Math.min(prev + 1, 6));
+  };
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const onSubmit = async (data: SiteVisitData) => {
@@ -109,6 +182,8 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
         signature: signatureData
       });
 
+      // Clear the draft from localStorage on success
+      clearDraft();
       toast.success('Site visit submitted successfully!');
       onSuccess?.();
     } catch (error: any) {
@@ -125,6 +200,41 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-light-gray min-h-[600px] flex flex-col">
+
+      {/* ── Draft Restore Banner ── */}
+      <AnimatePresence>
+        {showDraftBanner && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-amber-50 border-b border-amber-200 overflow-hidden"
+          >
+            <div className="flex items-center gap-3 px-5 py-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <BookMarked className="w-4 h-4 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-amber-800">Unsaved draft found</p>
+                <p className="text-xs text-amber-600">You have a draft saved locally. Resume where you left off?</p>
+              </div>
+              <button
+                onClick={restoreDraft}
+                className="shrink-0 text-xs font-bold text-primary bg-white px-3 py-1.5 rounded-lg border border-primary/30 hover:bg-primary/5 transition-colors"
+              >
+                Resume Draft
+              </button>
+              <button
+                onClick={discardDraft}
+                className="shrink-0 text-xs text-mid-gray hover:text-charcoal transition-colors p-1"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Progress Header */}
       <div className="bg-off-white border-b border-light-gray p-6">
         <div className="flex items-center justify-between mb-8">
@@ -132,7 +242,13 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
             <h1 className="text-xl font-bold text-charcoal">{t('site_visit_form')}</h1>
             <p className="text-xs text-mid-gray mt-1">Step {currentStep} of 6: {STEPS[currentStep-1].title}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {lastSaved && (
+              <span className="hidden sm:flex items-center gap-1 text-[10px] text-mid-gray">
+                <Clock className="w-3 h-3" />
+                Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
             <Button variant="outline" size="sm" onClick={() => i18n.changeLanguage('en')}>EN</Button>
             <Button variant="outline" size="sm" onClick={() => i18n.changeLanguage('ta')}>TA</Button>
           </div>
@@ -180,19 +296,41 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
               {/* STEP 1: Client & Context */}
               {currentStep === 1 && (
                 <div className="space-y-4">
+                  {isPreLoading ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-16">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <p className="text-sm text-mid-gray">Loading job data...</p>
+                    </div>
+                  ) : (
+                  <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-semibold text-charcoal">{t('client_name')}</label>
-                      <Input {...methods.register('clientName')} placeholder="e.g. John Doe" />
+                      <label className="text-sm font-semibold text-charcoal">{t('client_name')} <span className="text-red-500">*</span></label>
+                      <Input
+                        {...methods.register('clientName', { required: 'Client name is required' })}
+                        placeholder="e.g. John Doe"
+                        className={errors.clientName ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                      />
+                      {errors.clientName && <p className="text-xs text-red-500">{errors.clientName.message}</p>}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-semibold text-charcoal">{t('client_phone')}</label>
-                      <Input {...methods.register('clientPhone')} placeholder="e.g. +91 98765 43210" />
+                      <label className="text-sm font-semibold text-charcoal">{t('client_phone')} <span className="text-red-500">*</span></label>
+                      <Input
+                        {...methods.register('clientPhone', { required: 'Client phone is required' })}
+                        placeholder="e.g. +91 98765 43210"
+                        className={errors.clientPhone ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                      />
+                      {errors.clientPhone && <p className="text-xs text-red-500">{errors.clientPhone.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-charcoal">{t('site_address')}</label>
-                    <Textarea {...methods.register('siteAddress')} placeholder="Full address of the site" className="h-24" />
+                    <label className="text-sm font-semibold text-charcoal">{t('site_address')} <span className="text-red-500">*</span></label>
+                    <Textarea
+                      {...methods.register('siteAddress', { required: 'Site address is required' })}
+                      placeholder="Full address of the site"
+                      className={`h-24 ${errors.siteAddress ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
+                    />
+                    {errors.siteAddress && <p className="text-xs text-red-500">{errors.siteAddress.message}</p>}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -228,6 +366,8 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
                       value={watch('siteGps')}
                     />
                   </div>
+                  </>
+                  )}
                 </div>
               )}
 
@@ -429,7 +569,6 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
         ) : (
           <Button
             type="submit"
-            onClick={handleSubmit(onSubmit)}
             disabled={isSubmitting}
             className="h-12 px-8 bg-secondary hover:bg-orange-light font-bold text-white shadow-lg shadow-secondary/20"
           >

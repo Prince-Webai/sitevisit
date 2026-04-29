@@ -382,6 +382,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
                 contact_name: contactName,
                 contact_email: contactEmail,
                 contact_phone: contactPhone,
+                contact_mobile: contactMobile,
                 billing_same_as_job: billingSameAsJob
               };
 

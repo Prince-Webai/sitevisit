@@ -154,7 +154,7 @@ export function BillingTab() {
                 </div>
                 <div className="col-span-2 flex items-center gap-1">
                   <span className="flex-1 text-xs font-medium text-charcoal text-right">
-                    ${lineTotal.toFixed(2)}
+                    ₹{lineTotal.toFixed(2)}
                   </span>
                   <button
                     onClick={() => removeItem(item.id)}
@@ -185,16 +185,16 @@ export function BillingTab() {
       <div className="bg-off-white rounded-lg p-4 space-y-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-dark-gray">Subtotal</span>
-          <span className="font-medium text-charcoal">${subtotal.toFixed(2)}</span>
+          <span className="font-medium text-charcoal">₹{subtotal.toFixed(2)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-dark-gray">Tax (GST)</span>
-          <span className="font-medium text-charcoal">${tax.toFixed(2)}</span>
+          <span className="font-medium text-charcoal">₹{tax.toFixed(2)}</span>
         </div>
         <Separator className="bg-light-gray" />
         <div className="flex items-center justify-between text-base">
           <span className="font-semibold text-charcoal">Total</span>
-          <span className="font-bold text-charcoal text-lg">${total.toFixed(2)}</span>
+          <span className="font-bold text-charcoal text-lg">₹{total.toFixed(2)}</span>
         </div>
       </div>
 

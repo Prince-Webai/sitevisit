@@ -70,18 +70,34 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
     try {
       setLoading(true);
 
-      // 1. Create or upsert client
-      const client = await jobService.createClient({
-        first_name: form.firstName.trim(),
-        last_name:  form.lastName.trim() || '-',
-        email:      form.email.trim() || `${form.firstName.toLowerCase()}.${Date.now()}@tnsolar.com`,
-        phone:      form.phone.trim(),
-        address:    form.address.trim(),
-      });
+      // 1. Check for duplicate phone first
+      const supabase = (await import('@/lib/supabase/client')).createClient();
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('phone', form.phone.trim())
+        .maybeSingle();
+
+      let clientId: string;
+      if (existingClient?.id) {
+        // Reuse existing client instead of creating duplicate
+        clientId = existingClient.id;
+        toast('Existing client found for this phone number — linked to job.');
+      } else {
+        // Create new client
+        const client = await jobService.createClient({
+          first_name: form.firstName.trim(),
+          last_name:  form.lastName.trim() || '-',
+          email:      form.email.trim() || null as any,
+          phone:      form.phone.trim(),
+          address:    form.address.trim(),
+        });
+        clientId = client.id;
+      }
 
       // 2. Create the job as a Site Assessment
       const job = await jobService.createJob({
-        client_id:           client.id,
+        client_id:           clientId,
         address:             form.address.trim(),
         status:              'Lead' as any,
         category:            'Site Assessment' as any,

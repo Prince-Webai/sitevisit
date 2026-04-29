@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ChevronDown, Printer, FileText, Receipt, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
 import { DetailsTab } from './details-tab';
 import { SavedTab } from './saved-tab';
@@ -32,11 +33,11 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const isEditing = !!jobId;
 
   const handleDelete = async () => {
     if (!jobId || !user) return;
-    if (!confirm('Are you sure you want to delete this job? This action cannot be undone.')) return;
 
     try {
       setIsDeleting(true);
@@ -68,6 +69,7 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="w-[95vw] sm:max-w-[1000px] h-[85vh] p-0 flex flex-col gap-0 bg-white overflow-hidden [&>button]:top-4 [&>button]:right-4"
@@ -99,7 +101,7 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
                     <>
                       <div className="h-px bg-light-gray my-1" />
                       <DropdownMenuItem 
-                        onClick={handleDelete}
+                        onClick={() => setDeleteConfirmOpen(true)}
                         disabled={isDeleting}
                         className="gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/5"
                       >
@@ -148,8 +150,30 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-destructive">Delete this Job?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete the job, all associated site visit data, and activity logs.
+            This action <strong>cannot be undone</strong>.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-white hover:bg-destructive/90"
+          >
+            {isDeleting ? 'Deleting...' : 'Yes, Delete Job'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
 
 function SiteVisitTab({ jobId, onSuccess }: { jobId: string, onSuccess?: () => void }) {
   const { profile } = useAuth();

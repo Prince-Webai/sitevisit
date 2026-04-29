@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Camera, X, Loader2, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface PhotoInputProps {
   label: string;
@@ -53,7 +54,7 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
       onUpload(publicUrl);
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Failed to upload photo. Please try again.');
+      toast.error('Failed to upload photo. Please check your connection and try again.');
       setPreview(value || null);
     } finally {
       setUploading(false);

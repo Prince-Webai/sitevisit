@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Video, X, Loader2, Play, CheckCircle2 } from 'lucide-react';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface VideoInputProps {
   label: string;
@@ -54,7 +54,7 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
       onUpload(publicUrl);
     } catch (error) {
       console.error('Error uploading video:', error);
-      alert('Failed to upload video. Please try again.');
+      toast.error('Failed to upload video. Please check your connection and try again.');
       setPreview(value || null);
     } finally {
       setUploading(false);
@@ -79,10 +79,10 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
           <>
             <video 
               src={preview} 
-              autoPlay 
               loop 
               muted 
               playsInline
+              controls={false}
               className="absolute inset-0 w-full h-full object-cover animate-fade-in opacity-80"
             />
             {uploading && (

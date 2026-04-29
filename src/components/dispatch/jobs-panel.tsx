@@ -114,9 +114,9 @@ export function JobsPanel({ onJobDoubleClick, refreshKey }: JobsPanelProps) {
       const q = search.toLowerCase();
       return (
         j.job_number.toLowerCase().includes(q) ||
-        j.client?.first_name.toLowerCase().includes(q) ||
-        j.client?.last_name.toLowerCase().includes(q) ||
-        j.address.toLowerCase().includes(q) ||
+        (j.client?.first_name?.toLowerCase() ?? '').includes(q) ||
+        (j.client?.last_name?.toLowerCase() ?? '').includes(q) ||
+        (j.address?.toLowerCase() ?? '').includes(q) ||
         (j.description && j.description.toLowerCase().includes(q))
       );
     }

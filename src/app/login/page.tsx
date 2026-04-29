@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +57,28 @@ export default function LoginPage() {
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Enter your email address above, then click Forgot Password.');
+      return;
+    }
+    setForgotLoading(true);
+    setError('');
+    try {
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        { redirectTo: `${window.location.origin}/reset-password` }
+      );
+      if (resetError) throw resetError;
+      setForgotSent(true);
+    } catch (e: any) {
+      setError(e.message || 'Failed to send reset email. Try again.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -109,6 +133,13 @@ export default function LoginPage() {
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
               <Zap className="w-4 h-4 shrink-0" />
               {error}
+            </div>
+          )}
+          {/* Forgot Password Success Banner */}
+          {forgotSent && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
+              <Zap className="w-4 h-4 shrink-0" />
+              Password reset email sent! Check your inbox.
             </div>
           )}
 
@@ -168,9 +199,11 @@ export default function LoginPage() {
               </div>
               <button
                 type="button"
-                className="text-sm text-primary hover:text-primary-dark font-medium transition-colors"
+                onClick={handleForgotPassword}
+                disabled={forgotLoading}
+                className="text-sm text-primary hover:text-primary-dark font-medium transition-colors disabled:opacity-60"
               >
-                Forgot Password?
+                {forgotLoading ? 'Sending...' : 'Forgot Password?'}
               </button>
             </div>
 

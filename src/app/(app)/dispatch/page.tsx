@@ -64,6 +64,7 @@ export default function DispatchPage() {
   useEffect(() => {
     async function loadStaff() {
       if (!user || !profile) return;
+      const supabase = createClient();
       let query = supabase.from('profiles').select('id, full_name, role');
       if (isEngineer) {
         query = query.eq('id', user.id);
@@ -74,7 +75,7 @@ export default function DispatchPage() {
       setStaffMembers(data || []);
     }
     if (!authLoading) loadStaff();
-  }, [refreshKey, user, profile, authLoading, isEngineer, supabase]);
+  }, [refreshKey, user, profile, authLoading, isEngineer]);
 
   const handleRefresh = () => setRefreshKey(prev => prev + 1);
 
@@ -199,8 +200,7 @@ export default function DispatchPage() {
 
           {/* Mobile Drawer Toggle */}
           <Sheet>
-          <SheetTrigger
-            render={
+            <SheetTrigger asChild>
               <Button
                 variant="outline"
                 size="icon"
@@ -208,8 +208,7 @@ export default function DispatchPage() {
               >
                 <Layers className="w-5 h-5" />
               </Button>
-            }
-          />
+            </SheetTrigger>
             <SheetContent side="right" className="p-0 w-[300px] max-w-[85vw] border-none">
               <div className="h-full pt-10">
                 <JobsPanel onJobDoubleClick={handleJobDoubleClick} refreshKey={refreshKey} />

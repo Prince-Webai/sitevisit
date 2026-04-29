@@ -40,6 +40,9 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactMobile, setContactMobile] = useState('');
+  const [assignedTo, setAssignedTo] = useState<string | null>(null);
+  const [scheduledDate, setScheduledDate] = useState<string | null>(null);
+  const [staffList, setStaffList] = useState<any[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItemType[]>([
     { id: '1', text: 'Confirm site access requirements', completed: false },
     { id: '2', text: 'Verify roof condition and measurements', completed: false },
@@ -53,6 +56,9 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
         setLoading(true);
         const clientsData = await jobService.fetchClients();
         setClients(clientsData);
+
+        const { data: profiles } = await jobService.supabase.from('profiles').select('*').in('role', ['Technician', 'Engineer', 'Sales', 'Dispatcher', 'Admin']);
+        setStaffList(profiles || []);
 
         if (jobId) {
           const jobData = await jobService.fetchJobById(jobId);
@@ -69,6 +75,8 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
             setContactName(jobData.contact_name || '');
             setContactEmail(jobData.contact_email || '');
             setContactPhone(jobData.contact_phone || '');
+            setAssignedTo(jobData.assigned_to || null);
+            setScheduledDate(jobData.scheduled_date ? new Date(jobData.scheduled_date).toISOString().split('T')[0] : null);
             setBillingSameAsJob(jobData.billing_same_as_job !== false);
 
             // Fetch checklist
@@ -95,9 +103,9 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
     if (!clientSearch) return true;
     const q = clientSearch.toLowerCase();
     return (
-      c.first_name.toLowerCase().includes(q) ||
-      c.last_name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q)
+      (c.first_name?.toLowerCase() ?? '').includes(q) ||
+      (c.last_name?.toLowerCase() ?? '').includes(q) ||
+      (c.email?.toLowerCase() ?? '').includes(q)
     );
   });
 
@@ -162,7 +170,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
                   }}
                 >
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary-dark">
-                    {c.first_name[0]}{c.last_name[0]}
+                    {c.first_name?.[0] ?? '?'}{c.last_name?.[0] ?? ''}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-charcoal">{c.first_name} {c.last_name}</p>
@@ -244,6 +252,33 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
           onChange={(e) => setPoNumber(e.target.value)}
           className="h-10 bg-off-white border-light-gray"
         />
+      </div>
+
+      {/* Assignment & Date */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-charcoal">Assign Staff</label>
+          <Select value={assignedTo || 'unassigned'} onValueChange={(v) => setAssignedTo(v === 'unassigned' ? null : v)}>
+            <SelectTrigger className="h-10 bg-off-white border-light-gray">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {staffList.map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-charcoal">Scheduled Date</label>
+          <Input
+            type="date"
+            value={scheduledDate || ''}
+            onChange={(e) => setScheduledDate(e.target.value)}
+            className="h-10 bg-off-white border-light-gray"
+          />
+        </div>
       </div>
 
       {/* Description */}
@@ -359,7 +394,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
                 const newClient = await jobService.createClient({
                   first_name: names[0] || 'Unknown',
                   last_name: names.slice(1).join(' ') || 'Client',
-                  email: contactEmail || `${contactName.toLowerCase().replace(' ', '.')}@example.com`,
+                  email: contactEmail || null,
                   phone: contactPhone,
                   mobile: contactMobile,
                   address: address
@@ -383,6 +418,8 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
                 contact_email: contactEmail,
                 contact_phone: contactPhone,
                 contact_mobile: contactMobile,
+                assigned_to: assignedTo,
+                scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : null,
                 billing_same_as_job: billingSameAsJob
               };
 

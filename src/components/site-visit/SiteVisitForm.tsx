@@ -541,46 +541,46 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
               )}
             </motion.div>
           </AnimatePresence>
+
+          {/* Footer Navigation — inside <form> so submit wires correctly */}
+          <div className="bg-white border-t border-light-gray mt-6 -mx-6 -mb-6 px-6 py-5 flex justify-between gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="h-12 px-8 font-semibold"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              {t('back')}
+            </Button>
+
+            {currentStep < 6 ? (
+              <Button
+                type="button"
+                onClick={nextStep}
+                className="h-12 px-8 bg-primary hover:bg-primary-dark font-semibold text-white shadow-lg shadow-primary/20"
+              >
+                {t('next')}
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-12 px-8 bg-secondary hover:bg-orange-light font-bold text-white shadow-lg shadow-secondary/20"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                {t('submit')}
+              </Button>
+            )}
+          </div>
         </form>
       </FormProvider>
-
-      {/* Footer Navigation */}
-      <div className="bg-white border-t border-light-gray p-6 flex justify-between gap-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={prevStep}
-          disabled={currentStep === 1}
-          className="h-12 px-8 font-semibold"
-        >
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          {t('back')}
-        </Button>
-
-        {currentStep < 6 ? (
-          <Button
-            type="button"
-            onClick={nextStep}
-            className="h-12 px-8 bg-primary hover:bg-primary-dark font-semibold text-white shadow-lg shadow-primary/20"
-          >
-            {t('next')}
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="h-12 px-8 bg-secondary hover:bg-orange-light font-bold text-white shadow-lg shadow-secondary/20"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            {t('submit')}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

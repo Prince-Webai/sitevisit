@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { WeatherWidget } from '@/components/dashboard/weather-widget';
 import { KpiCards } from '@/components/dashboard/kpi-cards';
 import { useAuth } from '@/components/providers/auth-provider';
-import { ActionKanban } from '@/components/dashboard/action-kanban';
+import { JobStatusLists } from '@/components/dashboard/job-status-lists';
 import { MapPreview } from '@/components/dashboard/map-preview';
 import { JobModal } from '@/components/job-modal/job-modal';
 import { BookSiteVisitDialog } from '@/components/job-modal/book-site-visit-dialog';
@@ -69,15 +69,18 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Bottom Row: Kanban + Map */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <ActionKanban onJobClick={handleJobClick} key={refreshKey} />
+        {/* Job Status Lists (Today, Upcoming, Completed) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-charcoal">Job Schedule Overview</h2>
           </div>
-          <div className="lg:col-span-1">
-            <div className="h-[300px] lg:h-full min-h-[400px]">
-              <MapPreview />
-            </div>
+          <JobStatusLists onJobClick={handleJobClick} refreshKey={refreshKey} />
+        </div>
+
+        {/* Map Row */}
+        <div className="grid grid-cols-1 gap-4">
+          <div className="h-[400px]">
+            <MapPreview />
           </div>
         </div>
       </div>

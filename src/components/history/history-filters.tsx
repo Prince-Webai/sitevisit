@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const DATE_RANGES = ['Today', 'Yesterday', 'Last 7 Days', 'This Month', 'Custom'] as const;
-const STATUS_OPTIONS = ['Completed', 'Cancelled', 'Archived'] as const;
+const STATUS_OPTIONS = ['Completed', 'Cancelled', 'Unsuccessful', 'Archived'] as const;
 
 interface HistoryFiltersProps {
   search: string;

@@ -174,6 +174,8 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
       </AlertDialogContent>
     </AlertDialog>
     </>
+  );
+}
 
 function SiteVisitTab({ jobId, onSuccess }: { jobId: string, onSuccess?: () => void }) {
   const { profile } = useAuth();

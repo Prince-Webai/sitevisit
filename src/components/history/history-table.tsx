@@ -21,6 +21,8 @@ export function HistoryTable({ jobs, page, totalPages, onPageChange }: HistoryTa
         return <Badge className="bg-red-100 text-red-700 border-0 text-xs">Cancelled</Badge>;
       case 'Archived':
         return <Badge className="bg-gray-100 text-dark-gray border-0 text-xs">Archived</Badge>;
+      case 'Unsuccessful':
+        return <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">Unsuccessful</Badge>;
       default:
         return <Badge variant="secondary" className="text-xs">{status}</Badge>;
     }
@@ -76,8 +78,8 @@ export function HistoryTable({ jobs, page, totalPages, onPageChange }: HistoryTa
               <tr key={job.id} className="hover:bg-off-white/50 transition-colors cursor-pointer group">
                 <td className="px-4 py-3">
                   <span className="text-sm text-dark-gray">
-                    {job.completed_date
-                      ? new Date(job.completed_date).toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    {(job.completed_date || job.updated_at)
+                      ? new Date(job.completed_date || job.updated_at).toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' })
                       : '—'
                     }
                   </span>
@@ -89,7 +91,7 @@ export function HistoryTable({ jobs, page, totalPages, onPageChange }: HistoryTa
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-sm font-medium text-charcoal">
-                    {job.client?.first_name} {job.client?.last_name}
+                    {job.client ? `${job.client.first_name} ${job.client.last_name}` : (job.contact_name || '—')}
                   </span>
                 </td>
                 <td className="px-4 py-3">

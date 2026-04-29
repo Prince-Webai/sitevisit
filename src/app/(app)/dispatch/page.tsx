@@ -5,7 +5,8 @@ import {
   Plus, Package, Clock, Wrench,
   Map, ListChecks, CalendarDays, Users, Layers, Loader2
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { JobModal } from '@/components/job-modal/job-modal';
 import { BookSiteVisitDialog } from '@/components/job-modal/book-site-visit-dialog';
@@ -16,7 +17,6 @@ import { DispatchMap } from '@/components/dispatch/dispatch-map';
 import { TasksView } from '@/components/dispatch/tasks-view';
 import { CalendarView } from '@/components/dispatch/calendar-view';
 import { StaffScheduleView } from '@/components/dispatch/staff-schedule-view';
-import { QueuesView } from '@/components/dispatch/queues-view';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 
@@ -25,20 +25,15 @@ const TABS = [
   { id: 'tasks',     label: 'Tasks',          icon: ListChecks },
   { id: 'calendar',  label: 'Calendar',       icon: CalendarDays },
   { id: 'schedules', label: 'Schedules',      icon: Users },
-  { id: 'queues',    label: 'Queues',         icon: Layers },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
-const QUEUE_ACTIONS = [
-  { label: 'Parts', icon: Package, tab: 'queues' },
-  { label: 'Quotes', icon: Clock, tab: 'queues' },
-  { label: 'Service', icon: Wrench, tab: 'queues' },
-];
+
 
 export default function DispatchPage() {
   const { user, profile, loading: authLoading } = useAuth();
-  const [activeTab,      setActiveTab]      = useState<TabId>('tasks');
+  const [activeTab,      setActiveTab]      = useState<TabId>('schedules');
   const [jobModalOpen,   setJobModalOpen]   = useState(false);
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [addStaffOpen,   setAddStaffOpen]   = useState(false);
@@ -50,10 +45,7 @@ export default function DispatchPage() {
   const isAdminOrSales = ['Admin', 'Sales', 'Dispatcher'].includes(profile?.role || '');
   const isEngineer = profile?.role === 'Engineer' || profile?.role === 'Technician';
 
-  const filteredTabs = TABS.filter(tab => {
-    if (isEngineer && tab.id === 'queues') return false;
-    return true;
-  });
+  const filteredTabs = TABS;
 
   useEffect(() => {
     if (isEngineer && !['tasks', 'map', 'calendar', 'schedules'].includes(activeTab)) {
@@ -114,24 +106,7 @@ export default function DispatchPage() {
               </div>
             )}
 
-            {/* Quick Stats/Queues Shortcuts */}
-            {isAdminOrSales && (
-              <div className="hidden sm:flex items-center gap-2 px-2 md:px-4 border-r border-light-gray overflow-hidden">
-                {QUEUE_ACTIONS.map(q => {
-                  const Icon = q.icon;
-                  return (
-                    <button
-                      key={q.label}
-                      onClick={() => setActiveTab('queues')}
-                      title={q.label}
-                      className="flex flex-col items-center justify-center w-9 h-9 rounded-xl hover:bg-off-white transition-all border border-transparent hover:border-light-gray/40"
-                    >
-                      <Icon className="w-4 h-4 text-dark-gray" />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+
 
             {/* Staff Section */}
             <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 justify-end md:justify-start">
@@ -190,7 +165,6 @@ export default function DispatchPage() {
             {activeTab === 'tasks'     && <TasksView refreshKey={refreshKey} onJobClick={handleJobDoubleClick} />}
             {activeTab === 'calendar'  && <CalendarView refreshKey={refreshKey} onJobClick={handleJobDoubleClick} />}
             {activeTab === 'schedules' && <StaffScheduleView refreshKey={refreshKey} onJobClick={handleJobDoubleClick} onScheduleUpdate={handleRefresh} />}
-            {activeTab === 'queues'    && <QueuesView refreshKey={refreshKey} onJobClick={handleJobDoubleClick} />}
           </div>
 
           {/* Jobs Panel (Desktop Only) */}
@@ -200,14 +174,13 @@ export default function DispatchPage() {
 
           {/* Mobile Drawer Toggle */}
           <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="lg:hidden fixed bottom-24 right-4 w-12 h-12 rounded-2xl shadow-xl bg-primary text-white border-none z-40 active:scale-95 transition-all"
-              >
-                <Layers className="w-5 h-5" />
-              </Button>
+            <SheetTrigger
+              className={cn(
+                buttonVariants({ variant: "outline", size: "icon" }),
+                "lg:hidden fixed bottom-24 right-4 w-12 h-12 rounded-2xl shadow-xl bg-primary text-white border-none z-40 active:scale-95 transition-all"
+              )}
+            >
+              <Layers className="w-5 h-5" />
             </SheetTrigger>
             <SheetContent side="right" className="p-0 w-[300px] max-w-[85vw] border-none">
               <div className="h-full pt-10">

@@ -146,14 +146,12 @@ export function Sidebar({ className, onItemClick }: { className?: string; onItem
             </div>
           )}
           <Tooltip>
-            <TooltipTrigger render={
-              <button
-                onClick={signOut}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-md text-mid-gray hover:text-destructive hover:bg-red-50 shrink-0 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            } />
+            <TooltipTrigger
+              onClick={signOut}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-mid-gray hover:text-destructive hover:bg-red-50 shrink-0 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </TooltipTrigger>
             <TooltipContent side={collapsed ? 'right' : 'top'}>Sign out</TooltipContent>
           </Tooltip>
         </div>

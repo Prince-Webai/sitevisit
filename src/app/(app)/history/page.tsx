@@ -29,7 +29,7 @@ export default function HistoryPage() {
         const jobs = await jobService.fetchJobs({
           role: profile.role,
           userId: user.id,
-          statuses: ['Completed', 'Cancelled', 'Archived']
+          statuses: ['Completed', 'Cancelled', 'Unsuccessful', 'Archived']
         });
         setAllHistoryJobs(jobs);
       } catch (error) {
@@ -87,7 +87,7 @@ export default function HistoryPage() {
       }
 
       jobs = jobs.filter(j => {
-        const date = j.completed_date ? new Date(j.completed_date) : null;
+        const date = (j.completed_date || j.updated_at) ? new Date(j.completed_date || j.updated_at) : null;
         return date && date >= startDate;
       });
     }

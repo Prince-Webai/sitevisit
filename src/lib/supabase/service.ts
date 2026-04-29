@@ -134,7 +134,7 @@ export const jobService = {
     return this.updateJob(jobId, {
       assigned_to: staffId,
       scheduled_date: scheduledDate,
-    });
+    }, userId);
   },
 
   /**
@@ -414,5 +414,23 @@ export const jobService = {
       });
 
     if (error) console.error('Failed to log activity:', error);
+  },
+
+  /**
+   * Fetch all staff profiles
+   */
+  async fetchStaffProfiles() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('role', ['Technician', 'Engineer', 'Sales', 'Dispatcher', 'Admin'])
+      .order('full_name', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching staff profiles:', error);
+      return [];
+    }
+    return data || [];
   }
 };

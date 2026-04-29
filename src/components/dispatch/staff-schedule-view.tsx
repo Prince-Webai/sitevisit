@@ -27,7 +27,7 @@ export function StaffScheduleView({ onJobClick, refreshKey, onScheduleUpdate }: 
   const [dragSlot, setDragSlot]         = useState<number | null>(null);
   const [jobs, setJobs]                 = useState<Job[]>([]);
   const [staffMembers, setStaffMembers] = useState<any[]>([]);
-  const [loading, setLoading]           = useState(true);
+  const [loading, setLoading]           = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -78,21 +78,14 @@ export function StaffScheduleView({ onJobClick, refreshKey, onScheduleUpdate }: 
       }
       setLoading(true);
       try {
-        const jobsData = await jobService.fetchJobs({
-          role: profile.role,
-          userId: user.id
-        });
+        const [jobsData, profilesData] = await Promise.all([
+          jobService.fetchJobs({
+            role: profile.role,
+            userId: user.id
+          }),
+          jobService.fetchStaffProfiles()
+        ]);
         
-        let profilesQuery = supabase.from('profiles').select('*').in('role', ['Technician', 'Engineer', 'Sales', 'Dispatcher', 'Admin']);
-        
-        if (profile.role === 'Engineer' || profile.role === 'Technician') {
-          profilesQuery = profilesQuery.eq('id', user.id);
-        }
-
-        const { data: profilesData, error: profilesError } = await profilesQuery;
-        
-        if (profilesError) throw profilesError;
-
         setJobs(jobsData);
         const seen = new Set();
         const unique = (profilesData || []).filter((p: any) => {

@@ -54,11 +54,12 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
     async function loadData() {
       try {
         setLoading(true);
-        const clientsData = await jobService.fetchClients();
+        const [clientsData, profilesResponse] = await Promise.all([
+          jobService.fetchClients(),
+          jobService.fetchStaffProfiles()
+        ]);
         setClients(clientsData);
-
-        const { data: profiles } = await jobService.supabase.from('profiles').select('*').in('role', ['Technician', 'Engineer', 'Sales', 'Dispatcher', 'Admin']);
-        setStaffList(profiles || []);
+        setStaffList(profilesResponse || []);
 
         if (jobId) {
           const jobData = await jobService.fetchJobById(jobId);

@@ -148,7 +148,7 @@ export function CalendarView({ refreshKey, onJobClick }: { refreshKey?: number; 
             <button onClick={() => setSelectedDate(new Date())} className="text-[10px] uppercase tracking-wider font-bold text-primary bg-primary/5 border border-primary/20 px-3 py-2 rounded-lg hover:bg-primary hover:text-white transition-all active:scale-95">Today</button>
           </div>
 
-          <div className="flex items-center overflow-x-auto no-scrollbar bg-off-white rounded-lg p-1 border border-light-gray/60 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center overflow-x-auto bg-off-white rounded-lg p-1 border border-light-gray/60 w-full sm:w-auto justify-between sm:justify-start">
             {VIEWS.map(v => (
               <button 
                 key={v} 
@@ -164,10 +164,18 @@ export function CalendarView({ refreshKey, onJobClick }: { refreshKey?: number; 
         </div>
 
         {/* View Content Area */}
-        <div className="flex-1 overflow-y-auto bg-white relative no-scrollbar">
+        <div className="flex-1 overflow-y-auto bg-white relative">
           {loading && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-[2px]">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+          )}
+
+          {view === 'Month' && (
+            <div className="absolute top-2 right-6 z-10 animate-bounce pointer-events-none hidden lg:block">
+              <div className="bg-primary/10 text-primary text-[9px] font-bold px-2 py-1 rounded-full border border-primary/20 backdrop-blur-sm">
+                ↓ Scroll for more dates
+              </div>
             </div>
           )}
 

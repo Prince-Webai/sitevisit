@@ -78,17 +78,18 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
 
       // 1. Check for duplicate phone first
       const supabase = (await import('@/lib/supabase/client')).createClient();
-      const { data: existingClient, error: lookupError } = await supabase
+      const { data: clients, error: lookupError } = await supabase
         .from('clients')
         .select('id')
         .eq('phone', form.phone.trim())
-        .maybeSingle();
+        .limit(1);
 
       if (lookupError) throw new Error(`Client lookup failed: ${lookupError.message}`);
 
       let clientId: string;
-      if (existingClient?.id) {
-        clientId = existingClient.id;
+      if (clients && clients.length > 0) {
+        // Reuse existing client instead of creating duplicate
+        clientId = clients[0].id;
         toast('Existing client found for this phone number — linked to job.');
       } else {
         const client = await jobService.createClient({

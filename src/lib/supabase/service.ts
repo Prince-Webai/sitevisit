@@ -143,11 +143,8 @@ export const jobService = {
   async createJob(job: Omit<Job, 'id' | 'created_at' | 'updated_at' | 'job_number'>, userId?: string) {
     const supabase = createClient();
     
-    // Generate a unique job number: TN + last 4 digits of phone + random suffix
-    // This ensures uniqueness even for the same customer
-    const phoneSuffix = job.contact_phone ? job.contact_phone.replace(/\D/g, '').slice(-4) : '0000';
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const jobNumber = `TN-${phoneSuffix}-${randomSuffix}`;
+    // Use the phone number as the unique job number for easy searching
+    const jobNumber = job.contact_phone ? job.contact_phone.replace(/\D/g, '') : `TN-${Math.floor(1000 + Math.random() * 9000)}`;
     
     const { data, error } = await supabase
       .from('jobs')

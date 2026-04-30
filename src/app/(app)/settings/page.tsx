@@ -13,6 +13,7 @@ import { ChangePasswordDialog } from '@/components/settings/change-password-dial
 import { useAuth } from '@/components/providers/auth-provider';
 import { toast } from 'sonner';
 import type { Profile } from '@/lib/types';
+import { createClient } from '@/lib/supabase/client';
 
 const ROLE_COLORS: Record<string, string> = {
   Admin: 'bg-purple-100 text-purple-700',
@@ -39,7 +40,6 @@ export default function SettingsPage() {
       
       // 2. Regardless of API success, always fetch from the public profiles table
       // This ensures the list shows up even if the Admin Key is missing on Netlify
-      const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')

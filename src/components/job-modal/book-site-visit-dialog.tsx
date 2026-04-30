@@ -8,16 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { jobService } from '@/lib/supabase/service';
 import { useAuth } from '@/components/providers/auth-provider';
 import { toast } from 'sonner';
-import {
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  ClipboardList,
-  CheckCircle2,
-  Loader2,
-  ChevronRight,
-} from 'lucide-react';
+import { User, Phone, Mail, MapPin, ClipboardList, CheckCircle2, Loader2, ChevronRight } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 interface BookSiteVisitDialogProps {
   open: boolean;
@@ -77,7 +69,7 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
       setLoading(true);
 
       // 1. Check for duplicate phone first
-      const supabase = (await import('@/lib/supabase/client')).createClient();
+      const supabase = createClient();
       const { data: clients, error: lookupError } = await supabase
         .from('clients')
         .select('id')

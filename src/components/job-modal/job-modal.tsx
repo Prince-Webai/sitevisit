@@ -58,6 +58,7 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
       });
 
       toast.success(`Job #${jobNumber} deleted successfully`);
+      setDeleteConfirmOpen(false);
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {

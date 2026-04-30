@@ -67,24 +67,30 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
     if (!form.phone.trim())     { toast.error('Phone number is required'); return; }
     if (!form.address.trim())   { toast.error('Site address is required'); return; }
 
+    // Safety timeout — never hang longer than 15s
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      toast.error('Booking timed out. Please check your connection and try again.');
+    }, 15000);
+
     try {
       setLoading(true);
 
       // 1. Check for duplicate phone first
       const supabase = (await import('@/lib/supabase/client')).createClient();
-      const { data: existingClient } = await supabase
+      const { data: existingClient, error: lookupError } = await supabase
         .from('clients')
         .select('id')
         .eq('phone', form.phone.trim())
         .maybeSingle();
 
+      if (lookupError) throw new Error(`Client lookup failed: ${lookupError.message}`);
+
       let clientId: string;
       if (existingClient?.id) {
-        // Reuse existing client instead of creating duplicate
         clientId = existingClient.id;
         toast('Existing client found for this phone number — linked to job.');
       } else {
-        // Create new client
         const client = await jobService.createClient({
           first_name: form.firstName.trim(),
           last_name:  form.lastName.trim() || '-',
@@ -109,24 +115,27 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
         materials_status:    'Pending'
       });
 
-      // 3. Log activity
+      // 3. Log activity (non-blocking)
       if (user) {
-        await jobService.logActivity({
+        jobService.logActivity({
           userId: user.id,
           action: 'job_created',
           entityType: 'job',
           entityId: job.id,
           details: `Site Visit booked for ${form.firstName} ${form.lastName} by sales team.`
-        });
+        }).catch(console.error);
       }
 
+      clearTimeout(timeoutId);
       setJobNumber(job.job_number);
       setDone(true);
       onSuccess?.();
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to book site visit. Please try again.');
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.error('Booking error:', err);
+      toast.error(err?.message || 'Failed to book site visit. Please try again.');
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -251,7 +260,7 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
                 </label>
                 <Input
                   id="sv-address"
-                  placeholder="Enter the full site address"
+                  placeholder="Full address or Google Maps link"
                   value={form.address}
                   onChange={set('address')}
                   className="h-10 bg-off-white border-light-gray focus:border-primary/50"

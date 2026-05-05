@@ -13,11 +13,13 @@ export const jobService = {
         .select(`
           *,
           client:clients(id,first_name,last_name,email,phone,mobile,address),
-          assigned_staff:profiles(id,full_name,role,status),
-          created_by_profile:profiles!jobs_created_by_fkey(id,full_name,role)
+          assigned_staff:profiles!assigned_to(id,full_name,role,status)
         `);
       
-      // If assigned_to filter is explicitly provided, use it
+      // If an explicit assigned_to filter is provided, apply it.
+      // NOTE: role/userId are accepted for API compatibility but we intentionally
+      // do NOT filter by them here — all authenticated users see all jobs
+      // (global visibility model). RLS in Supabase enforces read access.
       if (filters?.assigned_to) {
         query = query.eq('assigned_to', filters.assigned_to);
       }
@@ -29,13 +31,17 @@ export const jobService = {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching jobs:', error);
-        return []; // Return empty instead of hanging
+        console.error('[jobService.fetchJobs] Supabase error:', error);
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('[jobService.fetchJobs] No jobs returned. This may indicate an RLS policy issue or an empty database. Filters applied:', JSON.stringify(filters));
       }
 
       return (data || []) as Job[];
     } catch (err) {
-      console.error('Unexpected error in fetchJobs:', err);
+      console.error('[jobService.fetchJobs] Unexpected error:', err);
       return [];
     }
   },
@@ -51,7 +57,7 @@ export const jobService = {
         .select(`
           *,
           client:clients(id,first_name,last_name,email,phone,mobile,address),
-          created_by_profile:profiles!jobs_created_by_fkey(id,full_name,role)
+          created_by_profile:profiles!created_by(id,full_name,role)
         `)
         .eq('id', jobId)
         .single();
@@ -78,7 +84,8 @@ export const jobService = {
         .from('jobs')
         .select(`
           *,
-          client:clients(id,first_name,last_name,email,phone,mobile,address)
+          client:clients(id,first_name,last_name,email,phone,mobile,address),
+          assigned_staff:profiles!assigned_to(id,full_name,role,status)
         `)
         .is('scheduled_date', null)
         .not('status', 'in', '("Completed", "Cancelled", "Unsuccessful")')
@@ -324,7 +331,7 @@ export const jobService = {
       // Search jobs
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
-        .select('id,job_number,status,address,description,contact_name,client:clients(id,first_name,last_name,phone)')
+        .select('id,job_number,status,address,description,contact_name,client:clients(id,first_name,last_name,phone),assigned_staff:profiles!assigned_to(id,full_name)')
         .or(`job_number.ilike.${q},address.ilike.${q},description.ilike.${q},contact_name.ilike.${q}`)
         .limit(5);
 

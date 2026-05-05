@@ -12,8 +12,9 @@ export const jobService = {
         .from('jobs')
         .select(`
           *,
-          client:clients(*),
-          assigned_staff:profiles(*)
+          client:clients(id,first_name,last_name,email,phone,mobile,address),
+          assigned_staff:profiles(id,full_name,role,status),
+          created_by_profile:profiles!jobs_created_by_fkey(id,full_name,role)
         `);
       
       // If assigned_to filter is explicitly provided, use it
@@ -49,7 +50,8 @@ export const jobService = {
         .from('jobs')
         .select(`
           *,
-          client:clients(*)
+          client:clients(id,first_name,last_name,email,phone,mobile,address),
+          created_by_profile:profiles!jobs_created_by_fkey(id,full_name,role)
         `)
         .eq('id', jobId)
         .single();
@@ -76,7 +78,7 @@ export const jobService = {
         .from('jobs')
         .select(`
           *,
-          client:clients(*)
+          client:clients(id,first_name,last_name,email,phone,mobile,address)
         `)
         .is('scheduled_date', null)
         .not('status', 'in', '("Completed", "Cancelled", "Unsuccessful")')
@@ -97,7 +99,7 @@ export const jobService = {
   /**
    * Update a job's status or other fields
    */
-  async updateJob(jobId: string, updates: Partial<Job>, userId?: string) {
+  async updateJob(jobId: string, updates: Partial<Job>, userId?: string, userName?: string) {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('jobs')
@@ -115,6 +117,7 @@ export const jobService = {
     if (userId) {
       this.logActivity({
         userId,
+        userName,
         action: 'job_updated',
         entityType: 'job',
         entityId: jobId,
@@ -128,17 +131,17 @@ export const jobService = {
   /**
    * Assign a job to a staff member and set the schedule date
    */
-  async assignJob(jobId: string, staffId: string, scheduledDate: string, userId?: string) {
+  async assignJob(jobId: string, staffId: string, scheduledDate: string, userId?: string, userName?: string) {
     return this.updateJob(jobId, {
       assigned_to: staffId,
       scheduled_date: scheduledDate,
-    }, userId);
+    }, userId, userName);
   },
 
   /**
    * Create a new job
    */
-  async createJob(job: Omit<Job, 'id' | 'created_at' | 'updated_at' | 'job_number'>, userId?: string) {
+  async createJob(job: Omit<Job, 'id' | 'created_at' | 'updated_at' | 'job_number'>, userId?: string, userName?: string) {
     const supabase = createClient();
     
     // Generate a unique job number: Phone + 4-digit random suffix to prevent collisions
@@ -146,10 +149,15 @@ export const jobService = {
     const jobNumber = job.contact_phone 
       ? `${job.contact_phone.replace(/\D/g, '')}-${randomSuffix}` 
       : `TN-${randomSuffix}`;
+
+    // Always stamp the creator when a userId is provided
+    const jobPayload = userId
+      ? { ...job, job_number: jobNumber, created_by: userId }
+      : { ...job, job_number: jobNumber };
     
     const { data, error } = await supabase
       .from('jobs')
-      .insert({ ...job, job_number: jobNumber })
+      .insert(jobPayload)
       .select()
       .single();
 
@@ -158,10 +166,11 @@ export const jobService = {
       throw error;
     }
 
-    // Auto-log activity
+    // Auto-log activity (userName passed directly — no extra DB round-trip)
     if (userId && data) {
       this.logActivity({
         userId,
+        userName,
         action: 'job_created',
         entityType: 'job',
         entityId: data.id,
@@ -315,7 +324,7 @@ export const jobService = {
       // Search jobs
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
-        .select('*, client:clients(*)')
+        .select('id,job_number,status,address,description,contact_name,client:clients(id,first_name,last_name,phone)')
         .or(`job_number.ilike.${q},address.ilike.${q},description.ilike.${q},contact_name.ilike.${q}`)
         .limit(5);
 
@@ -390,23 +399,26 @@ export const jobService = {
   /**
    * Log a system activity/audit event
    */
-  async logActivity(params: { userId: string; action: string; entityType: string; entityId?: string; details?: string }) {
+  async logActivity(params: { userId: string; userName?: string; action: string; entityType: string; entityId?: string; details?: string }) {
     const supabase = createClient();
-    
-    // Get user name for the log safely
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', params.userId)
-      .maybeSingle();
 
-    if (profileError) console.warn('Could not fetch user profile for logging:', profileError);
+    // Use the provided name directly to avoid an extra async DB round-trip
+    // that can silently fail under RLS or network issues.
+    let resolvedName = params.userName;
+    if (!resolvedName) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', params.userId)
+        .maybeSingle();
+      resolvedName = profile?.full_name || 'Staff User';
+    }
 
     const { error } = await supabase
       .from('audit_logs')
       .insert({
         user_id: params.userId,
-        user_name: profile?.full_name || 'Staff User',
+        user_name: resolvedName,
         action: params.action,
         entity_type: params.entityType,
         entity_id: params.entityId,

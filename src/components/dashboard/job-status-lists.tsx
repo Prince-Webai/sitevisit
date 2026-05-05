@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Calendar, Clock, CheckCircle2, ArrowRight, Loader2, MapPin } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, ArrowRight, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { jobService } from '@/lib/supabase/service';
-import { useAuth } from '@/components/providers/auth-provider';
 import type { Job } from '@/lib/types';
 
 interface JobCardProps {
@@ -53,53 +50,16 @@ function JobCard({ job, onClick }: JobCardProps) {
 }
 
 interface JobStatusListsProps {
+  jobs: Job[];
   onJobClick?: (jobId: string) => void;
-  refreshKey?: number;
 }
 
-export function JobStatusLists({ onJobClick, refreshKey }: JobStatusListsProps) {
-  const { user, profile, loading: authLoading } = useAuth();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadData() {
-      if (!user || !profile) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      try {
-        const data = await jobService.fetchJobs({ 
-          role: profile.role, 
-          userId: user.id 
-        });
-        setJobs(data);
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (!authLoading) loadData();
-  }, [user, profile, authLoading, refreshKey]);
-
-  if (loading) {
-     return (
-      <Card className="border-light-gray h-[500px] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-[10px] font-black text-mid-gray uppercase tracking-widest">Refreshing Schedule...</p>
-        </div>
-      </Card>
-    );
-  }
-
+export function JobStatusLists({ jobs, onJobClick }: JobStatusListsProps) {
   const today = new Date().toISOString().split('T')[0];
   
   const todaysJobs = jobs.filter(j => j.scheduled_date?.startsWith(today) && j.status !== 'Completed');
   const upcomingJobs = jobs.filter(j => {
-    if (j.status === 'Completed' || j.status === 'Cancelled' || j.status === 'Archived') return false;
+    if (j.status === 'Completed' || j.status === 'Cancelled' || j.status === 'Unsuccessful') return false;
     const isToday = j.scheduled_date?.startsWith(today);
     return !isToday; // Show everything else that is active (scheduled for future OR unscheduled)
   });

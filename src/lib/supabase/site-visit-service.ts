@@ -94,16 +94,9 @@ export const siteVisitService = {
       }
     }
 
-    // Add audit log entry
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', engineerId)
-      .single();
-
     await supabase.from('audit_logs').insert({
       user_id: engineerId,
-      user_name: profile?.full_name || 'System',
+      user_name: 'Engineer',
       action: 'site_visit_submitted',
       entity_type: 'job',
       entity_id: jobId,

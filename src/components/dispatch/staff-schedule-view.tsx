@@ -143,12 +143,11 @@ export function StaffScheduleView({ onJobClick, onScheduleUpdate }: StaffSchedul
     try {
       const assignedJob = await jobService.assignJob(jobId, staffId, scheduledDate.toISOString());
       
-      // Log activity
       if (user) {
-        // Find staff name
         const staff = staffMembers.find(s => s.id === staffId);
         await jobService.logActivity({
           userId: user.id,
+          userName: profile?.full_name,
           action: 'assigned',
           entityType: 'job',
           entityId: jobId,

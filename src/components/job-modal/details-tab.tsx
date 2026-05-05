@@ -426,9 +426,9 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
 
               let savedJob;
               if (jobId) {
-                savedJob = await jobService.updateJob(jobId, jobData);
+                savedJob = await jobService.updateJob(jobId, jobData, user?.id, authProfile?.full_name);
               } else {
-                savedJob = await jobService.createJob(jobData);
+                savedJob = await jobService.createJob(jobData, user?.id, authProfile?.full_name);
               }
 
               // Save checklist
@@ -437,11 +437,12 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
                 completed: item.completed
               })));
 
-              // Log activity
+              // Log activity — userName passed directly, no extra DB round-trip
               if (user) {
                 console.log('Attempting to log activity for job:', savedJob.job_number);
                 await jobService.logActivity({
                   userId: user.id,
+                  userName: authProfile?.full_name,
                   action: jobId ? 'job_updated' : 'job_created',
                   entityType: 'job',
                   entityId: savedJob.id,

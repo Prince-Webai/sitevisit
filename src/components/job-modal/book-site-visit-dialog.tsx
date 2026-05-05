@@ -36,7 +36,7 @@ const EMPTY_FORM: FormData = {
 };
 
 export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteVisitDialogProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -106,12 +106,13 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
         contact_phone:       form.phone.trim(),
         requires_site_visit: true,
         materials_status:    'Pending'
-      });
+      }, user?.id, profile?.full_name);
 
-      // 3. Log activity (non-blocking)
+      // 3. Log activity (non-blocking) — userName passed directly, no extra DB lookup
       if (user) {
         jobService.logActivity({
           userId: user.id,
+          userName: profile?.full_name,
           action: 'job_created',
           entityType: 'job',
           entityId: job.id,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WeatherWidget } from '@/components/dashboard/weather-widget';
@@ -10,15 +10,42 @@ import { JobStatusLists } from '@/components/dashboard/job-status-lists';
 import { MapPreview } from '@/components/dashboard/map-preview';
 import { JobModal } from '@/components/job-modal/job-modal';
 import { BookSiteVisitDialog } from '@/components/job-modal/book-site-visit-dialog';
+import { jobService } from '@/lib/supabase/service';
+import { createClient } from '@/lib/supabase/client';
+import type { Job } from '@/lib/types';
 
 export default function DashboardPage() {
-  const { profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [jobModalOpen,   setJobModalOpen]   = useState(false);
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [selectedJobId,  setSelectedJobId]  = useState<string | undefined>();
-  const [refreshKey,     setRefreshKey]     = useState(0);
+  const [jobs,           setJobs]           = useState<Job[]>([]);
+  const [profiles,       setProfiles]       = useState<{ status?: string }[]>([]);
+  const [dataLoading,    setDataLoading]    = useState(true);
 
-  if (authLoading) {
+  const loadData = useCallback(async () => {
+    if (!user || !profile) return;
+    setDataLoading(true);
+    try {
+      const supabase = createClient();
+      const [jobsData, { data: profilesData }] = await Promise.all([
+        jobService.fetchJobs({ role: profile.role, userId: user.id }),
+        supabase.from('profiles').select('status'),
+      ]);
+      setJobs(jobsData);
+      setProfiles(profilesData ?? []);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+    } finally {
+      setDataLoading(false);
+    }
+  }, [user, profile]);
+
+  useEffect(() => {
+    if (!authLoading) loadData();
+  }, [authLoading, loadData]);
+
+  if (authLoading || dataLoading) {
     return (
       <div className="h-full flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -44,7 +71,6 @@ export default function DashboardPage() {
               Overview of TN Solar operations today
             </p>
           </div>
-          {/* Primary CTA for Sales/Admins */}
           {isAdminOrSales && (
             <Button
               id="dashboard-book-site-visit-btn"
@@ -63,7 +89,7 @@ export default function DashboardPage() {
             <WeatherWidget />
           </div>
           <div className="lg:col-span-3">
-            <KpiCards key={refreshKey} />
+            <KpiCards jobs={jobs} profiles={profiles} />
           </div>
         </div>
 
@@ -72,7 +98,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-charcoal">Job Schedule Overview</h2>
           </div>
-          <JobStatusLists onJobClick={handleJobClick} refreshKey={refreshKey} />
+          <JobStatusLists jobs={jobs} onJobClick={handleJobClick} />
         </div>
 
         {/* Map Row */}
@@ -83,14 +109,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Book Site Visit — customer-first dialog */}
       <BookSiteVisitDialog
         open={bookDialogOpen}
         onOpenChange={setBookDialogOpen}
-        onSuccess={() => setRefreshKey(k => k + 1)}
+        onSuccess={loadData}
       />
 
-      {/* Job detail modal — opens when clicking existing job */}
       <JobModal
         open={jobModalOpen}
         onOpenChange={setJobModalOpen}

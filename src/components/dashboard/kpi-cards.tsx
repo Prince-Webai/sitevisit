@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { Calendar, Users, FileCheck, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { jobService } from '@/lib/supabase/service';
-import { createClient } from '@/lib/supabase/client';
+import type { Job } from '@/lib/types';
 
 function AnimatedCounter({ value, prefix = '' }: { value: number; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -31,40 +30,18 @@ function AnimatedCounter({ value, prefix = '' }: { value: number; prefix?: strin
   return <span>{prefix}{count.toLocaleString()}</span>;
 }
 
-export function KpiCards() {
-  const [todaysCount,    setTodaysCount]    = useState(0);
-  const [pendingCount,   setPendingCount]   = useState(0);
-  const [teamOnSite,     setTeamOnSite]     = useState(0);
-  const [teamEnRoute,    setTeamEnRoute]    = useState(0);
-  const [teamAvailable,  setTeamAvailable]  = useState(0);
-  const supabase = createClient();
+interface KpiCardsProps {
+  jobs: Job[];
+  profiles: { status?: string }[];
+}
 
-  useEffect(() => {
-    async function loadKpis() {
-      try {
-        const jobs = await jobService.fetchJobs();
-
-        // Today's scheduled jobs
-        const today = new Date().toISOString().split('T')[0];
-        const todayJobs = jobs.filter(j => j.scheduled_date?.startsWith(today));
-        setTodaysCount(todayJobs.length);
-
-        // Pending approvals = Lead
-        setPendingCount(jobs.filter(j => j.status === 'Lead').length);
-
-        // Team status from profiles
-        const { data: profiles } = await supabase.from('profiles').select('status');
-        if (profiles) {
-          setTeamOnSite(profiles.filter((p: any) => p.status === 'On Site').length);
-          setTeamEnRoute(profiles.filter((p: any) => p.status === 'En Route').length);
-          setTeamAvailable(profiles.filter((p: any) => !p.status || p.status === 'Available').length);
-        }
-      } catch (err) {
-        console.error('Failed to load KPIs:', err);
-      }
-    }
-    loadKpis();
-  }, []);
+export function KpiCards({ jobs, profiles }: KpiCardsProps) {
+  const today = new Date().toISOString().split('T')[0];
+  const todaysCount   = jobs.filter(j => j.scheduled_date?.startsWith(today)).length;
+  const pendingCount  = jobs.filter(j => j.status === 'Lead').length;
+  const teamOnSite    = profiles.filter(p => p.status === 'On Site').length;
+  const teamEnRoute   = profiles.filter(p => p.status === 'En Route').length;
+  const teamAvailable = profiles.filter(p => !p.status || p.status === 'Available').length;
 
   const kpis = [
     {

@@ -72,6 +72,12 @@ function JobCard({ job, onDoubleClick }: { job: Job; onDoubleClick: () => void }
             <GripVertical className="w-3 h-3 mr-0.5" />
             Drag to schedule
           </div>
+          {job.created_by_profile?.full_name && (
+            <div className="mt-1.5 flex items-center gap-1 text-[9px] text-mid-gray/60">
+              <span className="font-medium">Booked by</span>
+              <span className="font-bold text-mid-gray">{job.created_by_profile.full_name}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

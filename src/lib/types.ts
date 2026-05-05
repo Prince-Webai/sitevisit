@@ -41,6 +41,8 @@ export interface Job {
   total_value?: number;
   assigned_to?: string;
   assigned_staff?: Profile;
+  created_by?: string;
+  created_by_profile?: Profile;
   contact_name?: string;
   contact_email?: string;
   contact_phone?: string;

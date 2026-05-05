@@ -34,6 +34,7 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [createdByName, setCreatedByName] = useState<string | null>(null);
   const isEditing = !!jobId;
 
   const handleDelete = async () => {
@@ -48,9 +49,10 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
 
       await jobService.deleteJob(jobId);
       
-      // Log activity (system-wide)
+      // Log activity — pass userName directly so no extra DB round-trip is needed
       await jobService.logActivity({
         userId: user.id,
+        userName: profile?.full_name,
         action: 'job_deleted',
         entityType: 'job',
         entityId: jobId,
@@ -69,6 +71,17 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
     }
   };
 
+  // Load creator name when modal opens for an existing job
+  useEffect(() => {
+    if (!open || !jobId) {
+      setCreatedByName(null);
+      return;
+    }
+    jobService.fetchJobById(jobId).then(job => {
+      setCreatedByName(job?.created_by_profile?.full_name ?? null);
+    }).catch(() => {});
+  }, [open, jobId]);
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,9 +91,16 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
         {/* Header */}
         <DialogHeader className="px-6 py-4 border-b border-light-gray shrink-0">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-semibold text-charcoal">
-              {isEditing ? `Edit Job` : 'New Job'}
-            </DialogTitle>
+            <div>
+              <DialogTitle className="text-lg font-semibold text-charcoal">
+                {isEditing ? `Edit Job` : 'New Job'}
+              </DialogTitle>
+              {isEditing && createdByName && (
+                <p className="text-xs text-mid-gray mt-0.5">
+                  Created by <span className="font-semibold text-dark-gray">{createdByName}</span>
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-2 mr-6">
               <DropdownMenu>
                 <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 gap-1.5 px-3 text-xs rounded-md border border-light-gray bg-white hover:bg-off-white transition-colors font-medium">

@@ -99,9 +99,9 @@ export function JobStatusLists({ onJobClick, refreshKey }: JobStatusListsProps) 
   
   const todaysJobs = jobs.filter(j => j.scheduled_date?.startsWith(today) && j.status !== 'Completed');
   const upcomingJobs = jobs.filter(j => {
-    if (!j.scheduled_date || j.status === 'Completed') return false;
-    const schedDate = j.scheduled_date.split('T')[0];
-    return schedDate > today;
+    if (j.status === 'Completed' || j.status === 'Cancelled' || j.status === 'Archived') return false;
+    const isToday = j.scheduled_date?.startsWith(today);
+    return !isToday; // Show everything else that is active (scheduled for future OR unscheduled)
   });
   const completedJobs = jobs.filter(j => j.status === 'Completed').sort((a, b) => 
     new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
@@ -116,7 +116,7 @@ export function JobStatusLists({ onJobClick, refreshKey }: JobStatusListsProps) 
       items: todaysJobs,
     },
     {
-      title: "Upcoming",
+      title: "Queued / Upcoming",
       icon: Calendar,
       color: 'text-secondary',
       bg: 'bg-secondary/5',

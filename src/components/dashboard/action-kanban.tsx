@@ -124,7 +124,7 @@ export function ActionKanban({ onJobClick }: ActionKanbanProps) {
     <Card className="border-light-gray">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-charcoal">
-          {profile?.role === 'Engineer' || profile?.role === 'Technician' ? 'My Assigned Tasks' : 'Action Required'}
+          Action Required
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">

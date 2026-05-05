@@ -16,10 +16,8 @@ export const jobService = {
           assigned_staff:profiles(*)
         `);
       
-      // Auto-filter for Engineers/Technicians if role/userId provided
-      if (filters?.role === 'Engineer' || filters?.role === 'Technician') {
-        query = query.eq('assigned_to', filters.userId);
-      } else if (filters?.assigned_to) {
+      // If assigned_to filter is explicitly provided, use it
+      if (filters?.assigned_to) {
         query = query.eq('assigned_to', filters.assigned_to);
       }
 

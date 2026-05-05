@@ -41,9 +41,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-charcoal">Dashboard</h1>
             <p className="text-xs md:text-sm text-dark-gray mt-0.5">
-              {profile?.role === 'Engineer' || profile?.role === 'Technician' 
-                ? 'Your assigned solar assessments and tasks' 
-                : 'Overview of your TN Solar operations today'}
+              Overview of TN Solar operations today
             </p>
           </div>
           {/* Primary CTA for Sales/Admins */}

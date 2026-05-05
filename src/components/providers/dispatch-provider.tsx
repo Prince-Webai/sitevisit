@@ -47,12 +47,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
       setJobs(jobsData || []);
       setStaffProfiles(profilesData || []);
       
-      // Filter staff locations: Engineers only see themselves
-      const filteredStaff = (profile.role === 'Engineer' || profile.role === 'Technician')
-        ? (staffLocData as StaffLocation[]).filter(s => s.profile_id === user.id)
-        : (staffLocData as StaffLocation[]);
-        
-      setStaffLocations(filteredStaff || []);
+      setStaffLocations(staffLocData || []);
     } catch (err) {
       console.error('Failed to load dispatch data:', err);
       setError('Failed to load data. Please try again.');

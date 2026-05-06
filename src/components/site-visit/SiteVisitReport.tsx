@@ -186,18 +186,42 @@ export function SiteVisitReport({ data, date }: SiteVisitReportProps) {
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(data.videos).map(([key, url]) => (
-              url && (
+            {Object.entries(data.videos).map(([key, url]) => {
+              if (!url) return null;
+              const ext = url.split('?')[0].split('.').pop()?.toLowerCase() ?? 'mp4';
+              const mimeMap: Record<string, string> = {
+                mp4: 'video/mp4',
+                mov: 'video/mp4', // serve MOV as mp4 container hint; fallback link shown
+                webm: 'video/webm',
+                avi: 'video/x-msvideo',
+                m4v: 'video/mp4',
+              };
+              const mimeType = mimeMap[ext] ?? 'video/mp4';
+              return (
                 <div key={key} className="space-y-2">
                   <div className="aspect-video relative rounded-lg border border-light-gray bg-black overflow-hidden shadow-md">
-                    <video src={url} controls className="w-full h-full object-contain" />
+                    <video controls className="w-full h-full object-contain" playsInline>
+                      <source src={url} type={mimeType} />
+                      <source src={url} type="video/mp4" />
+                      <source src={url} type="video/webm" />
+                    </video>
                   </div>
-                  <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </p>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-primary underline font-medium"
+                    >
+                      Download
+                    </a>
+                  </div>
                 </div>
-              )
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

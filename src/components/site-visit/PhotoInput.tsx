@@ -36,19 +36,24 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
     setUploading(true);
 
     try {
-      // Compress image before upload
+      // Compress image before upload (converts to JPEG)
       const compressedFile = await compressImage(file);
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.jpg`;
       const folder = jobId ? `jobs/${jobId}/${path}` : `temp/${path}`;
       const filePath = `${folder}/${fileName}`;
 
-      const { data, error } = await supabase.storage
+      const { data, error: uploadError } = await supabase.storage
         .from('site-visits')
-        .upload(filePath, compressedFile);
+        .upload(filePath, compressedFile, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
 
-      if (error) throw error;
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        throw new Error(uploadError.message || 'Storage upload failed');
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -56,9 +61,10 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
         .getPublicUrl(filePath);
 
       onUpload(publicUrl);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading photo:', error);
-      toast.error('Failed to upload photo. Please check your connection and try again.');
+      const msg = error.message || 'Connection lost';
+      toast.error(`Upload failed: ${msg}. Please try again.`);
       setPreview(value || null);
     } finally {
       setUploading(false);

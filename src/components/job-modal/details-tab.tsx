@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { JOB_STATUSES, JOB_CATEGORIES } from '@/lib/constants';
+import type { JobStatus, JobCategory } from '@/lib/constants';
 import { jobService } from '@/lib/supabase/service';
 import { useAuth } from '@/components/providers/auth-provider';
 import { toast } from 'sonner';
-import type { Client } from '@/lib/types';
+import type { Client, Profile } from '@/lib/types';
 
 interface ChecklistItemType {
   id: string;
@@ -27,7 +28,8 @@ interface DetailsTabProps {
 
 export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
   const { user, profile: authProfile } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(!!jobId);
+  const [saving, setSaving] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -39,7 +41,6 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
-  const [contactMobile, setContactMobile] = useState('');
   const [assignedTo, setAssignedTo] = useState<string | null>(null);
   const [scheduledDate, setScheduledDate] = useState<string | null>(null);
   const [staffList, setStaffList] = useState<Profile[]>([]);
@@ -53,13 +54,13 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        setLoading(true);
-        const [clientsData, profilesResponse] = await Promise.all([
+        setInitialLoading(true);
+        const [clientsData, profilesData] = await Promise.all([
           jobService.fetchClients(),
           jobService.fetchStaffProfiles()
         ]);
         setClients(clientsData);
-        setStaffList((profilesResponse as Profile[]) || []);
+        setStaffList((profilesData as Profile[]) || []);
 
         if (jobId) {
           const jobData = await jobService.fetchJobById(jobId);
@@ -77,16 +78,19 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
             setContactEmail(jobData.contact_email || '');
             setContactPhone(jobData.contact_phone || '');
             setAssignedTo(jobData.assigned_to || null);
-            setScheduledDate(jobData.scheduled_date ? new Date(jobData.scheduled_date).toISOString().split('T')[0] : null);
+            setScheduledDate(
+              jobData.scheduled_date
+                ? new Date(jobData.scheduled_date).toISOString().split('T')[0]
+                : null
+            );
             setBillingSameAsJob(jobData.billing_same_as_job !== false);
 
-            // Fetch checklist
             const checklistData = await jobService.fetchChecklist(jobId);
             if (checklistData && checklistData.length > 0) {
               setChecklist(checklistData.map((item: { id: string; text: string; completed: boolean }) => ({
                 id: item.id,
                 text: item.text,
-                completed: item.completed
+                completed: item.completed,
               })));
             }
           }
@@ -94,7 +98,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
       }
     }
     loadData();
@@ -111,10 +115,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
   });
 
   const addChecklistItem = () => {
-    setChecklist([
-      ...checklist,
-      { id: Date.now().toString(), text: '', completed: false },
-    ]);
+    setChecklist([...checklist, { id: Date.now().toString(), text: '', completed: false }]);
   };
 
   const removeChecklistItem = (id: string) => {
@@ -133,9 +134,66 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
     ));
   };
 
-  const selectedClientData = selectedClient
-    ? clients.find(c => c.id === selectedClient)
-    : null;
+  const selectedClientData = selectedClient ? clients.find(c => c.id === selectedClient) : null;
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      let clientId = selectedClient;
+
+      if (!clientId && contactName) {
+        const names = contactName.split(' ');
+        const newClient = await jobService.createClient({
+          first_name: names[0] || 'Unknown',
+          last_name: names.slice(1).join(' ') || 'Client',
+          email: contactEmail || undefined,
+          phone: contactPhone,
+          address,
+        });
+        clientId = newClient.id;
+      }
+
+      if (!clientId) {
+        toast.error('Please select or create a client');
+        return;
+      }
+
+      const jobData = {
+        client_id: clientId,
+        address,
+        status: status as JobStatus,
+        category: category as JobCategory,
+        description,
+        po_number: poNumber,
+        contact_name: contactName,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+        assigned_to: assignedTo || undefined,
+        scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
+        billing_same_as_job: billingSameAsJob,
+      };
+
+      let savedJob;
+      if (jobId) {
+        savedJob = await jobService.updateJob(jobId, jobData, user?.id, authProfile?.full_name);
+      } else {
+        savedJob = await jobService.createJob(jobData, user?.id, authProfile?.full_name);
+      }
+
+      await jobService.saveChecklist(
+        savedJob.id,
+        checklist.map(item => ({ text: item.text, completed: item.completed }))
+      );
+
+      toast.success(jobId ? 'Job updated' : 'Job created');
+      onSuccess?.();
+    } catch (error: any) {
+      console.error('Failed to save job:', error);
+      toast.error(`Failed to save job: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -148,19 +206,15 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-mid-gray" />
           <Input
-            id="client-search"
             placeholder="Search existing client or add new..."
             value={clientSearch}
-            onChange={(e) => {
-              setClientSearch(e.target.value);
-              setShowClientDropdown(true);
-            }}
+            onChange={(e) => { setClientSearch(e.target.value); setShowClientDropdown(true); }}
             onFocus={() => setShowClientDropdown(true)}
             className="pl-9 h-10 bg-off-white border-light-gray"
           />
           {showClientDropdown && clientSearch && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-light-gray rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-              {filteredClients.map((c: any) => (
+              {filteredClients.map((c) => (
                 <button
                   key={c.id}
                   className="w-full text-left px-3 py-2 hover:bg-off-white transition-colors flex items-center gap-3"
@@ -205,7 +259,6 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
           Job Address
         </label>
         <Input
-          id="job-address"
           placeholder="Start typing an address..."
           value={address}
           onChange={(e) => setAddress(e.target.value)}
@@ -247,7 +300,6 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
       <div className="space-y-2">
         <label className="text-sm font-medium text-charcoal">PO Number</label>
         <Input
-          id="po-number"
           placeholder="Enter PO number"
           value={poNumber}
           onChange={(e) => setPoNumber(e.target.value)}
@@ -286,7 +338,6 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
       <div className="space-y-2">
         <label className="text-sm font-medium text-charcoal">Job Description</label>
         <Textarea
-          id="job-description"
           placeholder="Describe the work that needs to be done"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -300,7 +351,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
       <div className="space-y-3">
         <label className="text-sm font-medium text-charcoal">Checklist</label>
         <div className="space-y-2">
-          {checklist.map((item: ChecklistItemType) => (
+          {checklist.map((item) => (
             <div key={item.id} className="flex items-center gap-2 group">
               <GripVertical className="w-4 h-4 text-light-gray cursor-grab shrink-0" />
               <Checkbox
@@ -342,29 +393,23 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
       <div className="space-y-4">
         <label className="text-sm font-medium text-charcoal">Job Contact</label>
         <div className="grid grid-cols-2 gap-3">
-          <Input 
-            placeholder="Name" 
-            className="h-9 text-sm bg-off-white border-light-gray" 
+          <Input
+            placeholder="Name"
+            className="h-9 text-sm bg-off-white border-light-gray"
             value={contactName}
             onChange={(e) => setContactName(e.target.value)}
           />
-          <Input 
-            placeholder="Email" 
-            className="h-9 text-sm bg-off-white border-light-gray" 
+          <Input
+            placeholder="Email"
+            className="h-9 text-sm bg-off-white border-light-gray"
             value={contactEmail}
             onChange={(e) => setContactEmail(e.target.value)}
           />
-          <Input 
-            placeholder="Phone" 
-            className="h-9 text-sm bg-off-white border-light-gray" 
+          <Input
+            placeholder="Phone"
+            className="h-9 text-sm bg-off-white border-light-gray col-span-2"
             value={contactPhone}
             onChange={(e) => setContactPhone(e.target.value)}
-          />
-          <Input 
-            placeholder="Mobile" 
-            className="h-9 text-sm bg-off-white border-light-gray" 
-            value={contactMobile}
-            onChange={(e) => setContactMobile(e.target.value)}
           />
         </div>
 
@@ -383,89 +428,12 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
 
       {/* Save button */}
       <div className="pt-2 pb-4">
-        <Button 
-          onClick={async () => {
-            try {
-              setLoading(true);
-              let clientId = selectedClient;
-
-              // If no client selected but name/email provided, create a new one
-              if (!clientId && contactName) {
-                const names = contactName.split(' ');
-                const newClient = await jobService.createClient({
-                  first_name: names[0] || 'Unknown',
-                  last_name: names.slice(1).join(' ') || 'Client',
-                  email: contactEmail || undefined,
-                  phone: contactPhone,
-                  mobile: contactMobile,
-                  address: address
-                });
-                clientId = newClient.id;
-              }
-
-              if (!clientId) {
-                toast.error('Please select or create a client');
-                return;
-              }
-
-              const jobData = {
-                client_id: clientId,
-                address,
-                status: status as JobStatus,
-                category: category as JobCategory,
-                description,
-                po_number: poNumber,
-                contact_name: contactName,
-                contact_email: contactEmail,
-                contact_phone: contactPhone,
-                contact_mobile: contactMobile,
-                assigned_to: assignedTo || undefined,
-                scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : undefined,
-                billing_same_as_job: billingSameAsJob
-              };
-
-              let savedJob;
-              if (jobId) {
-                savedJob = await jobService.updateJob(jobId, jobData, user?.id, authProfile?.full_name);
-              } else {
-                savedJob = await jobService.createJob(jobData, user?.id, authProfile?.full_name);
-              }
-
-              // Save checklist
-              await jobService.saveChecklist(savedJob.id, checklist.map(item => ({
-                text: item.text,
-                completed: item.completed
-              })));
-
-              // Log activity — userName passed directly, no extra DB round-trip
-              if (user) {
-                console.log('Attempting to log activity for job:', savedJob.job_number);
-                await jobService.logActivity({
-                  userId: user.id,
-                  userName: authProfile?.full_name,
-                  action: jobId ? 'job_updated' : 'job_created',
-                  entityType: 'job',
-                  entityId: savedJob.id,
-                  details: jobId 
-                    ? `Updated details for Job #${savedJob.job_number}`
-                    : `Created new Job #${savedJob.job_number} for ${contactName}`
-                });
-                console.log('Activity logged successfully in UI');
-              }
-
-              toast.success(jobId ? 'Job updated' : 'Job created');
-              onSuccess?.();
-            } catch (error) {
-              console.error('Failed to save job:', error);
-              toast.error('Failed to save job');
-            } finally {
-              setLoading(false);
-            }
-          }}
-          disabled={loading}
+        <Button
+          onClick={handleSave}
+          disabled={saving || initialLoading}
           className="w-full bg-primary hover:bg-green-light text-white h-10 font-semibold shadow-md shadow-primary/20"
         >
-          {loading ? 'Saving...' : 'Save Job'}
+          {saving ? 'Saving...' : initialLoading ? 'Loading...' : 'Save Job'}
         </Button>
       </div>
     </div>

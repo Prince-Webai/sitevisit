@@ -15,16 +15,23 @@ function VideoCard({ url, label }: { url: string; label: string }) {
     try {
       const res = await fetch(url);
       const blob = await res.blob();
+      const contentType = res.headers.get('content-type')?.split(';')[0].trim() ?? '';
+      const extMap: Record<string, string> = {
+        'video/quicktime': 'mov',
+        'video/mp4': 'mp4',
+        'video/webm': 'webm',
+        'video/x-msvideo': 'avi',
+      };
+      const ext = extMap[contentType] ?? url.split('?')[0].split('.').pop() ?? 'mp4';
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `${label.replace(/\s+/g, '_').toLowerCase()}.mp4`;
+      a.download = `${label.replace(/\s+/g, '_').toLowerCase()}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } catch {
-      // fallback: open in new tab
       window.open(url, '_blank');
     } finally {
       setDownloading(false);
@@ -38,6 +45,7 @@ function VideoCard({ url, label }: { url: string; label: string }) {
           <div className="flex flex-col items-center gap-2 p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-yellow-400" />
             <p className="text-white text-xs font-medium">Format not supported in browser</p>
+            <p className="text-white/60 text-[10px] text-center">Download and open with VLC or QuickTime</p>
             <button
               type="button"
               onClick={handleDownload}

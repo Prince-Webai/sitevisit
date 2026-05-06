@@ -351,7 +351,7 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-charcoal">{t('phase')}</label>
-                      <Select onValueChange={(val) => setValue('phase', val || undefined)}>
+                      <Select onValueChange={(val) => setValue('phase', val || undefined)} value={watch('phase') || undefined}>
                         <SelectTrigger><SelectValue placeholder="Select phase" /></SelectTrigger>
                         <SelectContent>
                           {['Single Phase', 'Two Phase', 'Three Phase'].map(v => (
@@ -415,7 +415,7 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-charcoal">Shape of Area</label>
-                    <Select onValueChange={(val) => setValue('solarSpace.shape', val || undefined)}>
+                    <Select onValueChange={(val) => setValue('solarSpace.shape', val || undefined)} value={watch('solarSpace.shape') || undefined}>
                       <SelectTrigger><SelectValue placeholder="Select shape" /></SelectTrigger>
                       <SelectContent>
                         {['Rectangle', 'Square', 'L-Shape', 'Irregular', 'Other'].map(v => (
@@ -475,7 +475,7 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
 
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-charcoal">Inverter Location</label>
-                    <Select onValueChange={(val) => setValue('electrical.inverterLocation', val || 'Same floor')}>
+                    <Select onValueChange={(val) => setValue('electrical.inverterLocation', val || 'Same floor')} value={watch('electrical.inverterLocation') || 'Same floor'}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Same floor">Same floor</SelectItem>

@@ -15,7 +15,7 @@ interface VideoInputProps {
 }
 
 const supabase = createClient();
-const MAX_VIDEO_MB = 50;
+const MAX_VIDEO_MB = 150;
 const MAX_VIDEO_BYTES = MAX_VIDEO_MB * 1024 * 1024;
 
 // Derive a safe extension from the file's MIME type or name

@@ -3,12 +3,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { jobService } from '@/lib/supabase/service';
 import { useAuth } from '@/components/providers/auth-provider';
-import type { Job, StaffLocation } from '@/lib/types';
+import type { Job, StaffLocation, Profile } from '@/lib/types';
 
 interface DispatchContextType {
   jobs: Job[];
   staffLocations: StaffLocation[];
-  staffProfiles: any[];
+  staffProfiles: Profile[];
   loading: boolean;
   refresh: () => void;
   error: string | null;
@@ -20,7 +20,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, loading: authLoading } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [staffLocations, setStaffLocations] = useState<StaffLocation[]>([]);
-  const [staffProfiles, setStaffProfiles] = useState<any[]>([]);
+  const [staffProfiles, setStaffProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -45,7 +45,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
       console.log('Dispatch data received:', { jobs: jobsData?.length, locations: staffLocData?.length, profiles: profilesData?.length });
 
       setJobs(jobsData || []);
-      setStaffProfiles(profilesData || []);
+      setStaffProfiles((profilesData as Profile[]) || []);
       
       setStaffLocations(staffLocData || []);
     } catch (err) {
@@ -58,7 +58,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!authLoading) {
-      fetchData();
+      Promise.resolve().then(() => fetchData());
     }
   }, [authLoading, refreshKey, fetchData]);
 

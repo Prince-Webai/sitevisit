@@ -42,7 +42,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
   const [contactMobile, setContactMobile] = useState('');
   const [assignedTo, setAssignedTo] = useState<string | null>(null);
   const [scheduledDate, setScheduledDate] = useState<string | null>(null);
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<Profile[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItemType[]>([
     { id: '1', text: 'Confirm site access requirements', completed: false },
     { id: '2', text: 'Verify roof condition and measurements', completed: false },
@@ -59,7 +59,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
           jobService.fetchStaffProfiles()
         ]);
         setClients(clientsData);
-        setStaffList(profilesResponse || []);
+        setStaffList((profilesResponse as Profile[]) || []);
 
         if (jobId) {
           const jobData = await jobService.fetchJobById(jobId);
@@ -83,7 +83,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
             // Fetch checklist
             const checklistData = await jobService.fetchChecklist(jobId);
             if (checklistData && checklistData.length > 0) {
-              setChecklist(checklistData.map((item: any) => ({
+              setChecklist(checklistData.map((item: { id: string; text: string; completed: boolean }) => ({
                 id: item.id,
                 text: item.text,
                 completed: item.completed
@@ -300,7 +300,7 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
       <div className="space-y-3">
         <label className="text-sm font-medium text-charcoal">Checklist</label>
         <div className="space-y-2">
-          {checklist.map((item: any) => (
+          {checklist.map((item: ChecklistItemType) => (
             <div key={item.id} className="flex items-center gap-2 group">
               <GripVertical className="w-4 h-4 text-light-gray cursor-grab shrink-0" />
               <Checkbox
@@ -411,8 +411,8 @@ export function DetailsTab({ jobId, onSuccess }: DetailsTabProps) {
               const jobData = {
                 client_id: clientId,
                 address,
-                status: status as any,
-                category: category as any,
+                status: status as JobStatus,
+                category: category as JobCategory,
                 description,
                 po_number: poNumber,
                 contact_name: contactName,

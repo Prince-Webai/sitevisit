@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, ExternalLink, Navigation, Loader2, Users } from 'lucide-react';
+import { ExternalLink, Navigation, Loader2, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { jobService } from '@/lib/supabase/service';
 import type { StaffLocation } from '@/lib/types';
@@ -16,7 +16,7 @@ export function MapPreview() {
     async function loadStaff() {
       try {
         const data = await jobService.fetchStaffLocations();
-        setStaff(data as any);
+        setStaff(data as StaffLocation[]);
       } catch (error) {
         console.error('Error loading map preview:', error);
       } finally {

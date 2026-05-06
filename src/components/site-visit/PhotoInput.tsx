@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Camera, X, Loader2, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Camera, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -15,35 +15,41 @@ interface PhotoInputProps {
   jobId?: string;
 }
 
+const supabase = createClient();
+
 export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: PhotoInputProps) {
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(value || null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
 
-  // Sync preview with external value changes
-  useEffect(() => {
-    if (value) setPreview(value);
-  }, [value]);
+  // Use local preview if available, otherwise fallback to the value from props
+  const preview = localPreview || value;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (uploading) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show local preview
+    console.log('Starting photo upload:', file.name, file.size);
+    // Show local preview immediately for better UX
     const localUrl = URL.createObjectURL(file);
-    setPreview(localUrl);
+    setLocalPreview(localUrl);
     setUploading(true);
 
     try {
-      // Compress image before upload (converts to JPEG)
-      const compressedFile = await compressImage(file);
+      // Compress image before upload; fall back to original if format is unsupported (e.g. HEIC)
+      let compressedFile: File;
+      try {
+        compressedFile = await compressImage(file);
+      } catch {
+        compressedFile = file;
+      }
       
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.jpg`;
       const folder = jobId ? `jobs/${jobId}/${path}` : `temp/${path}`;
       const filePath = `${folder}/${fileName}`;
 
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('site-visits')
         .upload(filePath, compressedFile, {
           contentType: 'image/jpeg',
@@ -60,19 +66,28 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
         .from('site-visits')
         .getPublicUrl(filePath);
 
+      // Notify parent about the new URL
       onUpload(publicUrl);
+      
+      // Clear local preview so we switch to the public URL from props
+      // We do this after a short delay or in the next tick to prevent flickering
+      // if the parent re-render takes a moment.
+      setTimeout(() => setLocalPreview(null), 100);
+      
     } catch (error: any) {
       console.error('Error uploading photo:', error);
       const msg = error.message || 'Connection lost';
       toast.error(`Upload failed: ${msg}. Please try again.`);
-      setPreview(value || null);
+      setLocalPreview(null);
     } finally {
       setUploading(false);
+      // Clear input value so same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const clearPhoto = () => {
-    setPreview(null);
+    setLocalPreview(null);
     onUpload('');
   };
 
@@ -136,7 +151,6 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="image/*"
-        capture="environment"
         className="hidden"
       />
     </div>

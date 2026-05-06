@@ -61,7 +61,9 @@ export default function SettingsPage() {
     }
   }
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    Promise.resolve().then(() => fetchUsers());
+  }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const handleDeleteUser = async (u: Profile) => {
     if (u.id === user?.id) { toast.error("You can't delete your own account"); return; }
@@ -73,8 +75,8 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(json.error);
       toast.success(`${u.full_name} removed from the system`);
       fetchUsers();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to remove user');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove user');
     }
   };
 

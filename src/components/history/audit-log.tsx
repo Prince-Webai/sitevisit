@@ -29,7 +29,7 @@ export function AuditLog() {
     async function loadLogs() {
       try {
         const data = await jobService.fetchAuditLogs();
-        setLogs(data as any);
+        setLogs((data as AuditLogType[]) || []);
       } catch (error) {
         console.error('Error loading logs:', error);
       } finally {

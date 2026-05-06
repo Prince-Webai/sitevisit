@@ -41,16 +41,18 @@ function getDraftKey(jobId?: string) {
   return jobId ? `tn_sv_draft_${jobId}` : 'tn_sv_draft_new';
 }
 
-export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?: () => void }) {
-  const { t, i18n } = useTranslation();
+const supabase = createClient();
+
+export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreLoading, setIsPreLoading] = useState(!!jobId);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const signatureRef = useRef<SignatureCanvas>(null);
-  const supabase = createClient();
   const draftKey = getDraftKey(jobId);
+
 
   const methods = useForm<SiteVisitData>({
     defaultValues: {
@@ -335,7 +337,7 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-charcoal">{t('no_of_floors')}</label>
-                      <Select onValueChange={(val) => setValue('noOfFloors', val || undefined as any)} value={floors || undefined}>
+                      <Select onValueChange={(val) => setValue('noOfFloors', val || undefined)} value={floors || undefined}>
                         <SelectTrigger><SelectValue placeholder="Select floors" /></SelectTrigger>
                         <SelectContent>
                           {['B+G', 'G', 'G+1', 'G+2', 'G+3', 'G+4', 'Other'].map(v => (
@@ -349,7 +351,7 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-charcoal">{t('phase')}</label>
-                      <Select onValueChange={(val) => setValue('phase', val || undefined as any)}>
+                      <Select onValueChange={(val) => setValue('phase', val || undefined)}>
                         <SelectTrigger><SelectValue placeholder="Select phase" /></SelectTrigger>
                         <SelectContent>
                           {['Single Phase', 'Two Phase', 'Three Phase'].map(v => (
@@ -413,7 +415,7 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-charcoal">Shape of Area</label>
-                    <Select onValueChange={(val) => setValue('solarSpace.shape', val || undefined as any)}>
+                    <Select onValueChange={(val) => setValue('solarSpace.shape', val || undefined)}>
                       <SelectTrigger><SelectValue placeholder="Select shape" /></SelectTrigger>
                       <SelectContent>
                         {['Rectangle', 'Square', 'L-Shape', 'Irregular', 'Other'].map(v => (
@@ -473,7 +475,7 @@ export function SiteVisitForm({ jobId, onSuccess }: { jobId?: string, onSuccess?
 
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-charcoal">Inverter Location</label>
-                    <Select onValueChange={(val) => setValue('electrical.inverterLocation', (val || 'Same floor') as any)}>
+                    <Select onValueChange={(val) => setValue('electrical.inverterLocation', val || 'Same floor')}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Same floor">Same floor</SelectItem>

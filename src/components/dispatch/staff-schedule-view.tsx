@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, X, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { jobService } from '@/lib/supabase/service';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { toast } from 'sonner';
-import type { Job } from '@/lib/types';
+import type { Job, Profile } from '@/lib/types';
 
 const VIEWS = ['Day', 'Week', '2 weeks', 'Month'] as const;
 
@@ -31,8 +30,8 @@ export function StaffScheduleView({ onJobClick, onScheduleUpdate }: StaffSchedul
   const staffMembers = useMemo(() => {
     const seen = new Set();
     return (staffProfiles || [])
-      .filter((p: any) => ['Engineer', 'Technician'].includes(p.role)) // Only show Engineers/Technicians
-      .filter((p: any) => {
+      .filter((p: Profile) => ['Engineer', 'Technician'].includes(p.role)) // Only show Engineers/Technicians
+      .filter((p: Profile) => {
         if (seen.has(p.id)) return false;
         seen.add(p.id);
         return true;
@@ -42,7 +41,6 @@ export function StaffScheduleView({ onJobClick, onScheduleUpdate }: StaffSchedul
   const loading = providerLoading || authLoading;
 
   const gridRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
 
   // Dynamically generate columns based on view
   const columns = useMemo(() => {
@@ -58,7 +56,7 @@ export function StaffScheduleView({ onJobClick, onScheduleUpdate }: StaffSchedul
     
     const daysCount = view === 'Week' ? 7 : view === '2 weeks' ? 14 : 30;
     const cols = [];
-    let startDate = new Date(selectedDate);
+    const startDate = new Date(selectedDate);
     if (view === 'Month') {
       startDate.setDate(1);
     } else {
@@ -190,7 +188,7 @@ export function StaffScheduleView({ onJobClick, onScheduleUpdate }: StaffSchedul
 
   const removeAssignment = async (jobId: string) => {
     try {
-      await jobService.updateJob(jobId, { assigned_to: null as any, scheduled_date: null as any });
+      await jobService.updateJob(jobId, { assigned_to: null, scheduled_date: null });
       refresh();
       toast.success('Assignment removed');
       onScheduleUpdate?.();

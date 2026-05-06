@@ -77,8 +77,8 @@ export default function LoginPage() {
       );
       if (resetError) throw resetError;
       setForgotSent(true);
-    } catch (e: any) {
-      setError(e.message || 'Failed to send reset email. Try again.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to send reset email. Try again.');
     } finally {
       setForgotLoading(false);
     }

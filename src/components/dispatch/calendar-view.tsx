@@ -1,14 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import { jobService } from '@/lib/supabase/service';
-import { useAuth } from '@/components/providers/auth-provider';
-import type { Job } from '@/lib/types';
 
 const VIEWS = ['Day', 'Week', '2 Weeks', 'Month'] as const;
 type ViewType = (typeof VIEWS)[number];

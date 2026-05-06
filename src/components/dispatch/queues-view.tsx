@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Package, Clock, Wrench, MapPin, Loader2, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { jobService } from '@/lib/supabase/service';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useDispatchData } from '@/components/providers/dispatch-provider';
 import type { Job } from '@/lib/types';

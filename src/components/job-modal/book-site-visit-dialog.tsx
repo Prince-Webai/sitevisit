@@ -87,7 +87,7 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
         const client = await jobService.createClient({
           first_name: form.firstName.trim(),
           last_name:  form.lastName.trim() || '-',
-          email:      form.email.trim() || null as any,
+          email:      form.email.trim() || undefined,
           phone:      form.phone.trim(),
           address:    form.address.trim(),
         });
@@ -98,8 +98,8 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
       const job = await jobService.createJob({
         client_id:           clientId,
         address:             form.address.trim(),
-        status:              'Lead' as any,
-        category:            'Site Assessment' as any,
+        status:              'Lead',
+        category:            'Site Assessment',
         description:         form.notes.trim() || 'Site visit booked by sales',
         contact_name:        `${form.firstName} ${form.lastName}`.trim(),
         contact_email:       form.email.trim(),
@@ -124,10 +124,10 @@ export function BookSiteVisitDialog({ open, onOpenChange, onSuccess }: BookSiteV
       setJobNumber(job.job_number);
       setDone(true);
       onSuccess?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId);
       console.error('Booking error:', err);
-      toast.error(err?.message || 'Failed to book site visit. Please try again.');
+      toast.error(err instanceof Error ? err.message : 'Failed to book site visit. Please try again.');
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);

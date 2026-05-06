@@ -10,6 +10,7 @@ import { SavedTab } from './saved-tab';
 import { SiteVisitForm } from '../site-visit/SiteVisitForm';
 import { SiteVisitReport } from '../site-visit/SiteVisitReport';
 import { siteVisitService } from '@/lib/supabase/site-visit-service';
+import type { SiteVisitData } from '@/types/site-visit';
 import { jobService } from '@/lib/supabase/service';
 import { useAuth } from '@/components/providers/auth-provider';
 import { toast } from 'sonner';
@@ -74,7 +75,7 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
   // Load creator name when modal opens for an existing job
   useEffect(() => {
     if (!open || !jobId) {
-      setCreatedByName(null);
+      Promise.resolve().then(() => setCreatedByName(null));
       return;
     }
     jobService.fetchJobById(jobId).then(job => {
@@ -200,7 +201,7 @@ export function JobModal({ open, onOpenChange, jobId, onSuccess }: JobModalProps
 
 function SiteVisitTab({ jobId, onSuccess }: { jobId: string, onSuccess?: () => void }) {
   const { profile } = useAuth();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<SiteVisitData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 

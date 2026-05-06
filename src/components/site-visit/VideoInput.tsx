@@ -14,24 +14,23 @@ interface VideoInputProps {
   jobId?: string;
 }
 
+const supabase = createClient();
+
 export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: VideoInputProps) {
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(value || null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
 
-  // Sync preview with external value changes
-  useEffect(() => {
-    if (value) setPreview(value);
-  }, [value]);
+  const preview = localPreview || value;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (uploading) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Show local preview
     const localUrl = URL.createObjectURL(file);
-    setPreview(localUrl);
+    setLocalPreview(localUrl);
     setUploading(true);
 
     try {
@@ -40,9 +39,12 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
       const folder = jobId ? `jobs/${jobId}/${path}` : `temp/${path}`;
       const filePath = `${folder}/${fileName}`;
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('site-visits')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          contentType: file.type || 'video/mp4',
+          upsert: true,
+        });
 
       if (error) throw error;
 
@@ -52,17 +54,19 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
         .getPublicUrl(filePath);
 
       onUpload(publicUrl);
+      setTimeout(() => setLocalPreview(null), 100);
     } catch (error) {
       console.error('Error uploading video:', error);
       toast.error('Failed to upload video. Please check your connection and try again.');
-      setPreview(value || null);
+      setLocalPreview(null);
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const clearVideo = () => {
-    setPreview(null);
+    setLocalPreview(null);
     onUpload('');
   };
 
@@ -134,7 +138,6 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="video/*"
-        capture="environment"
         className="hidden"
       />
     </div>

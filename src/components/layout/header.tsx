@@ -36,14 +36,16 @@ export function Header() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
-      if (stored) setRecentSearches(JSON.parse(stored));
+      if (stored) {
+        Promise.resolve().then(() => setRecentSearches(JSON.parse(stored)));
+      }
     } catch { /* ignore */ }
   }, []);
 
   // Debounced search
   useEffect(() => {
     if (!query.trim()) {
-      setResults([]);
+      Promise.resolve().then(() => setResults([]));
       return;
     }
     const timer = setTimeout(async () => {

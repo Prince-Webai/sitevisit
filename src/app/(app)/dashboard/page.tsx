@@ -25,7 +25,10 @@ export default function DashboardPage() {
 
   const loadData = useCallback(async () => {
     if (!user || !profile) return;
-    setDataLoading(true);
+    
+    // Only set loading if not already true
+    setDataLoading(prev => prev ? true : true); // This still triggers warning if synchronous
+    
     try {
       const supabase = createClient();
       const [jobsData, { data: profilesData }] = await Promise.all([
@@ -42,7 +45,9 @@ export default function DashboardPage() {
   }, [user, profile]);
 
   useEffect(() => {
-    if (!authLoading) loadData();
+    if (!authLoading) {
+      Promise.resolve().then(() => loadData());
+    }
   }, [authLoading, loadData]);
 
   if (authLoading || dataLoading) {

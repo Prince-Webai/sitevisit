@@ -68,8 +68,8 @@ export async function createStaffMember(data: {
     }
 
     return { success: true, password }; // Return generated password so admin can share it
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Unexpected error creating staff member:', error);
-    return { success: false, error: error.message || 'An unexpected error occurred' };
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
   }
 }

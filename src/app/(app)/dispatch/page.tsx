@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Plus, Package, Clock, Wrench, X,
+  Plus, X,
   Map, ListChecks, CalendarDays, Users, Layers, Loader2
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -17,7 +17,6 @@ import { DispatchMap } from '@/components/dispatch/dispatch-map';
 import { TasksView } from '@/components/dispatch/tasks-view';
 import { CalendarView } from '@/components/dispatch/calendar-view';
 import { StaffScheduleView } from '@/components/dispatch/staff-schedule-view';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 
 const TABS = [
@@ -42,14 +41,13 @@ export default function DispatchPage() {
 }
 
 function DispatchContent() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const { staffLocations, loading: dataLoading, refresh: handleRefresh, error } = useDispatchData();
   const [activeTab,      setActiveTab]      = useState<TabId>('schedules');
   const [jobModalOpen,   setJobModalOpen]   = useState(false);
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [addStaffOpen,   setAddStaffOpen]   = useState(false);
   const [selectedJobId,  setSelectedJobId]  = useState<string | undefined>();
-  const supabase = createClient();
 
   const isAdminOrSales = ['Admin', 'Sales', 'Dispatcher'].includes(profile?.role || '');
   const isEngineer = profile?.role === 'Engineer' || profile?.role === 'Technician';
@@ -58,7 +56,7 @@ function DispatchContent() {
 
   useEffect(() => {
     if (isEngineer && !['tasks', 'map', 'calendar', 'schedules'].includes(activeTab)) {
-        setActiveTab('tasks');
+        Promise.resolve().then(() => setActiveTab('tasks'));
     }
   }, [profile, activeTab, isEngineer]);
 

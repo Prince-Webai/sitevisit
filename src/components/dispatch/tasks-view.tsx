@@ -1,8 +1,3 @@
-import { useState, useEffect } from 'react';
-import { jobService } from '@/lib/supabase/service';
-import { useAuth } from '@/components/providers/auth-provider';
-import type { Job } from '@/lib/types';
-
 interface TasksViewProps {
   onJobClick: (jobId: string) => void;
   refreshKey?: number;
@@ -11,7 +6,7 @@ interface TasksViewProps {
 import { useDispatchData } from '@/components/providers/dispatch-provider';
 
 export function TasksView({ onJobClick }: TasksViewProps) {
-  const { jobs, loading } = useDispatchData();
+  const { jobs } = useDispatchData();
 
 
   const jobsWithTasks = jobs.filter(j =>

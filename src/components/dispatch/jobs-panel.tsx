@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, X, GripVertical, MapPin, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { jobService } from '@/lib/supabase/service';
-import { useAuth } from '@/components/providers/auth-provider';
 import type { Job } from '@/lib/types';
 
 interface JobsPanelProps {
@@ -93,8 +91,8 @@ export function JobsPanel({ onJobDoubleClick }: JobsPanelProps) {
 
 
   const filteredJobs = jobs.filter(j => {
-    if (filter === 'Quotes' && j.status !== 'Lead') return false;
-    if (filter === 'Work Orders' && j.status !== 'Work Order') return false;
+    if (filter === 'Quotes' && !['Lead', 'Quote', 'Quote Sent', 'Site Visit'].includes(j.status)) return false;
+    if (filter === 'Work Orders' && !['Work Order', 'In Progress'].includes(j.status)) return false;
     if (filter === 'Completed' && j.status !== 'Completed') return false;
 
     if (search) {

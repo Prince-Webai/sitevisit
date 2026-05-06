@@ -1,19 +1,17 @@
-/**
- * Compresses an image file by resizing it and reducing quality.
- * 
- * @param file The original image file
- * @param maxWidth Maximum width of the compressed image
- * @param maxHeight Maximum height of the compressed image
- * @param quality Quality setting (0.0 to 1.0)
- * @returns A promise that resolves to the compressed image file
- */
 export async function compressImage(
-  file: File, 
-  maxWidth: number = 1200, 
-  maxHeight: number = 1200, 
+  file: File,
+  maxWidth: number = 1200,
+  maxHeight: number = 1200,
   quality: number = 0.7
 ): Promise<File> {
   return new Promise((resolve, reject) => {
+    // Prevent infinite hang on unsupported formats (e.g. HEIC on non-Safari browsers)
+    const timer = setTimeout(() => reject(new Error('Image processing timed out')), 15000);
+    const done = (result: File | Error) => {
+      clearTimeout(timer);
+      result instanceof Error ? reject(result) : resolve(result);
+    };
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
@@ -24,7 +22,6 @@ export async function compressImage(
         let width = img.width;
         let height = img.height;
 
-        // Calculate new dimensions while maintaining aspect ratio
         if (width > height) {
           if (width > maxWidth) {
             height *= maxWidth / width;
@@ -42,7 +39,7 @@ export async function compressImage(
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          reject(new Error('Could not get canvas context'));
+          done(new Error('Could not get canvas context'));
           return;
         }
 
@@ -51,24 +48,17 @@ export async function compressImage(
         canvas.toBlob(
           (blob) => {
             if (!blob) {
-              reject(new Error('Could not create blob from canvas'));
+              done(new Error('Could not create blob from canvas'));
               return;
             }
-            
-            // Create a new File from the blob
-            const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            
-            resolve(compressedFile);
+            done(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
           },
           'image/jpeg',
           quality
         );
       };
-      img.onerror = (error) => reject(error);
+      img.onerror = () => done(new Error('Failed to decode image'));
     };
-    reader.onerror = (error) => reject(error);
+    reader.onerror = () => done(new Error('Failed to read file'));
   });
 }

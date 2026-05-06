@@ -19,11 +19,15 @@ export const COLORS = {
 // Job Statuses
 export const JOB_STATUSES = {
   LEAD: 'Lead',
+  QUOTE: 'Quote',
+  QUOTE_SENT: 'Quote Sent',
   SITE_VISIT: 'Site Visit',
   WORK_ORDER: 'Work Order',
+  IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
   UNSUCCESSFUL: 'Unsuccessful',
+  ARCHIVED: 'Archived',
 } as const;
 
 export type JobStatus = (typeof JOB_STATUSES)[keyof typeof JOB_STATUSES];

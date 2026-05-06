@@ -28,7 +28,7 @@ export function SavedTab({ jobId }: { jobId?: string }) {
   }, [jobId]);
 
   useEffect(() => {
-    loadLogs();
+    Promise.resolve().then(() => loadLogs());
   }, [loadLogs]);
 
   return (

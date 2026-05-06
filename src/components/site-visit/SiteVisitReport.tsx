@@ -8,6 +8,29 @@ import { MapPin, Phone, User, Calendar, Camera, Video, Ruler, Zap, CheckCircle2,
 
 function VideoCard({ url, label }: { url: string; label: string }) {
   const [failed, setFailed] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${label.replace(/\s+/g, '_').toLowerCase()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // fallback: open in new tab
+      window.open(url, '_blank');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="aspect-video relative rounded-lg border border-light-gray bg-black overflow-hidden shadow-md flex items-center justify-center">
@@ -15,15 +38,14 @@ function VideoCard({ url, label }: { url: string; label: string }) {
           <div className="flex flex-col items-center gap-2 p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-yellow-400" />
             <p className="text-white text-xs font-medium">Format not supported in browser</p>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-              className="mt-1 px-3 py-1.5 bg-white text-charcoal text-[11px] font-bold rounded-md hover:bg-off-white transition-colors"
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="mt-1 px-3 py-1.5 bg-white text-charcoal text-[11px] font-bold rounded-md hover:bg-off-white transition-colors disabled:opacity-60"
             >
-              Download to view
-            </a>
+              {downloading ? 'Downloading…' : 'Download to view'}
+            </button>
           </div>
         ) : (
           <video

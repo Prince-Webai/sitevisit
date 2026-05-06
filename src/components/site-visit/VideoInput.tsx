@@ -45,6 +45,16 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reject formats browsers can't play (MOV, AVI, etc.)
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/x-m4v'];
+    const allowedExts = ['mp4', 'webm', 'm4v'];
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
+      toast.error('Please upload an MP4 video. MOV/AVI are not supported by browsers. On iPhone: Settings → Camera → Formats → Most Compatible.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     // Validate size before attempting upload
     if (file.size > MAX_VIDEO_BYTES) {
       toast.error(`Video is too large (${(file.size / 1024 / 1024).toFixed(0)} MB). Please keep it under ${MAX_VIDEO_MB} MB.`);
@@ -173,7 +183,7 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
             </div>
             <div className="text-center">
               <p className="text-[11px] font-bold text-dark-gray uppercase tracking-wider">Record Video</p>
-              <p className="text-[9px] text-mid-gray mt-0.5">MP4, MOV up to {MAX_VIDEO_MB} MB</p>
+              <p className="text-[9px] text-mid-gray mt-0.5">MP4 or WebM up to {MAX_VIDEO_MB} MB</p>
             </div>
             <Button
               type="button"
@@ -190,7 +200,7 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="video/*"
+        accept="video/mp4,video/webm,.mp4,.webm,.m4v"
         className="hidden"
       />
     </div>

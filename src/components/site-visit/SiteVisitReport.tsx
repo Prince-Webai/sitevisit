@@ -1,10 +1,46 @@
 'use client';
 
+import { useState } from 'react';
 import { SiteVisitData } from '@/types/site-visit';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Phone, User, Calendar, Camera, Video, Ruler, Zap, ShieldCheck, CheckCircle2 } from 'lucide-react';
-import Image from 'next/image';
+import { MapPin, Phone, User, Calendar, Camera, Video, Ruler, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
+
+function VideoCard({ url, label }: { url: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="space-y-2">
+      <div className="aspect-video relative rounded-lg border border-light-gray bg-black overflow-hidden shadow-md flex items-center justify-center">
+        {failed ? (
+          <div className="flex flex-col items-center gap-2 p-4 text-center">
+            <AlertTriangle className="w-8 h-8 text-yellow-400" />
+            <p className="text-white text-xs font-medium">Format not supported in browser</p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="mt-1 px-3 py-1.5 bg-white text-charcoal text-[11px] font-bold rounded-md hover:bg-off-white transition-colors"
+            >
+              Download to view
+            </a>
+          </div>
+        ) : (
+          <video
+            controls
+            playsInline
+            className="w-full h-full object-contain"
+            onError={() => setFailed(true)}
+          >
+            <source src={url} type="video/mp4" />
+            <source src={url} type="video/webm" />
+          </video>
+        )}
+      </div>
+      <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter">{label}</p>
+    </div>
+  );
+}
 
 interface SiteVisitReportProps {
   data: SiteVisitData;
@@ -12,15 +48,6 @@ interface SiteVisitReportProps {
 }
 
 export function SiteVisitReport({ data, date }: SiteVisitReportProps) {
-  const sections = [
-    { title: 'Client & Context', icon: User, id: 'client' },
-    { title: 'Perimeter Photos', icon: Camera, id: 'photos' },
-    { title: 'Solar Space Details', icon: Ruler, id: 'solar' },
-    { title: 'Structure & Electrical', icon: Zap, id: 'structure' },
-    { title: 'Logistics', icon: ShieldCheck, id: 'logistics' },
-    { title: 'Declaration', icon: CheckCircle2, id: 'declaration' },
-  ];
-
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       <div className="flex items-center justify-between">
@@ -186,42 +213,15 @@ export function SiteVisitReport({ data, date }: SiteVisitReportProps) {
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(data.videos).map(([key, url]) => {
-              if (!url) return null;
-              const ext = url.split('?')[0].split('.').pop()?.toLowerCase() ?? 'mp4';
-              const mimeMap: Record<string, string> = {
-                mp4: 'video/mp4',
-                mov: 'video/mp4', // serve MOV as mp4 container hint; fallback link shown
-                webm: 'video/webm',
-                avi: 'video/x-msvideo',
-                m4v: 'video/mp4',
-              };
-              const mimeType = mimeMap[ext] ?? 'video/mp4';
-              return (
-                <div key={key} className="space-y-2">
-                  <div className="aspect-video relative rounded-lg border border-light-gray bg-black overflow-hidden shadow-md">
-                    <video controls className="w-full h-full object-contain" playsInline>
-                      <source src={url} type={mimeType} />
-                      <source src={url} type="video/mp4" />
-                      <source src={url} type="video/webm" />
-                    </video>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </p>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-primary underline font-medium"
-                    >
-                      Download
-                    </a>
-                  </div>
-                </div>
-              );
-            })}
+            {Object.entries(data.videos).map(([key, url]) =>
+              url ? (
+                <VideoCard
+                  key={key}
+                  url={url}
+                  label={key.replace(/([A-Z])/g, ' $1').trim()}
+                />
+              ) : null
+            )}
           </div>
         </CardContent>
       </Card>

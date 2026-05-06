@@ -5,6 +5,7 @@ import { Camera, X, Loader2, Image as ImageIcon, CheckCircle2 } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/image-utils';
 
 interface PhotoInputProps {
   label: string;
@@ -35,6 +36,9 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
     setUploading(true);
 
     try {
+      // Compress image before upload
+      const compressedFile = await compressImage(file);
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const folder = jobId ? `jobs/${jobId}/${path}` : `temp/${path}`;
@@ -42,7 +46,7 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
 
       const { data, error } = await supabase.storage
         .from('site-visits')
-        .upload(filePath, file);
+        .upload(filePath, compressedFile);
 
       if (error) throw error;
 

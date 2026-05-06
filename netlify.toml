@@ -11,6 +11,11 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@supabase/supabase-js", "@supabase/ssr"]
+  included_files = ["public/**"]
+
 [[headers]]
   for = "/_next/static/*"
   [headers.values]

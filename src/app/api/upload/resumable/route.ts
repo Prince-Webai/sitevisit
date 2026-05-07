@@ -58,7 +58,15 @@ export async function POST(req: Request) {
     if (!location) {
       const errorText = await res.text();
       console.error('Drive API Error:', errorText);
-      return NextResponse.json({ error: 'Failed to initiate resumable upload' }, { status: 500 });
+      try {
+        const errorJson = JSON.parse(errorText);
+        return NextResponse.json({ 
+          error: 'Drive API Error', 
+          details: errorJson.error?.message || errorText 
+        }, { status: res.status });
+      } catch {
+        return NextResponse.json({ error: 'Failed to initiate resumable upload', details: errorText }, { status: res.status });
+      }
     }
 
     return NextResponse.json({ uploadUrl: location });

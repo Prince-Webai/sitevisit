@@ -62,7 +62,10 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
         }),
       });
 
-      if (!initRes.ok) throw new Error('Failed to initiate upload session');
+      if (!initRes.ok) {
+        const errorData = await initRes.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || 'Failed to initiate upload session');
+      }
       const { uploadUrl } = await initRes.json();
 
       // 2. Perform Chunked Upload

@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react';
 import { Camera, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { compressImage } from '@/lib/image-utils';
 
@@ -11,18 +10,15 @@ interface PhotoInputProps {
   label: string;
   onUpload: (url: string) => void;
   value?: string;
-  path?: string;
   jobId?: string;
+  subfolderName?: string;
 }
 
-const supabase = createClient();
-
-export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: PhotoInputProps) {
+export function PhotoInput({ label, onUpload, value, jobId, subfolderName }: PhotoInputProps) {
   const [uploading, setUploading] = useState(false);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Use local preview if available, otherwise fallback to the value from props
   const preview = localPreview || value;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,58 +26,40 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
     const file = e.target.files?.[0];
     if (!file) return;
 
-    console.log('Starting photo upload:', file.name, file.size);
-    // Show local preview immediately for better UX
     const localUrl = URL.createObjectURL(file);
     setLocalPreview(localUrl);
     setUploading(true);
 
     try {
-      // Compress image before upload; fall back to original if format is unsupported (e.g. HEIC)
-      let compressedFile: File;
+      let uploadFile: File;
       try {
-        compressedFile = await compressImage(file);
+        uploadFile = await compressImage(file);
       } catch {
-        compressedFile = file;
-      }
-      
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.jpg`;
-      const folder = jobId ? `jobs/${jobId}/${path}` : `temp/${path}`;
-      const filePath = `${folder}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('site-visits')
-        .upload(filePath, compressedFile, {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
-
-      if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
-        throw new Error(uploadError.message || 'Storage upload failed');
+        uploadFile = file;
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('site-visits')
-        .getPublicUrl(filePath);
+      // Upload server-side to avoid browser CORS restrictions with Google Drive
+      const body = new FormData();
+      body.append('file', uploadFile);
+      if (jobId) body.append('jobId', jobId);
+      if (subfolderName) body.append('subfolderName', subfolderName);
 
-      // Notify parent about the new URL
-      onUpload(publicUrl);
-      
-      // Clear local preview so we switch to the public URL from props
-      // We do this after a short delay or in the next tick to prevent flickering
-      // if the parent re-render takes a moment.
+      const res = await fetch('/api/upload/photo', { method: 'POST', body });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Upload failed');
+      }
+      const { url } = await res.json();
+
+      onUpload(url);
       setTimeout(() => setLocalPreview(null), 100);
-      
+
     } catch (error: any) {
-      console.error('Error uploading photo:', error);
-      const msg = error.message || 'Connection lost';
-      toast.error(`Upload failed: ${msg}. Please try again.`);
+      console.error('Photo upload error:', error);
+      toast.error(`Upload failed: ${error.message}. Please try again.`);
       setLocalPreview(null);
     } finally {
       setUploading(false);
-      // Clear input value so same file can be selected again
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -94,17 +72,17 @@ export function PhotoInput({ label, onUpload, value, path = 'visits', jobId }: P
   return (
     <div className="space-y-2">
       <label className="text-xs font-semibold text-charcoal">{label}</label>
-      
-      <div 
+
+      <div
         className={`relative group h-40 rounded-xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center gap-2
           ${preview ? 'border-primary bg-green-50/10' : 'border-light-gray hover:border-primary/50 bg-off-white'}
         `}
       >
         {preview ? (
           <>
-            <img 
-              src={preview} 
-              alt={label} 
+            <img
+              src={preview}
+              alt={label}
               className="absolute inset-0 w-full h-full object-cover animate-fade-in"
             />
             {uploading && (

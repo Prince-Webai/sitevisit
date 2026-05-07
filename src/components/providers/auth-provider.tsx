@@ -37,21 +37,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Immediately hydrate session to prevent login-page flicker on first load
+    let currentUserId: string | null = null;
+
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
+        currentUserId = session.user.id;
         setUser(session.user);
         await fetchProfile(session.user.id);
       }
       setLoading(false);
     });
 
-    // Also listen for future auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
-        setUser(session.user);
-        await fetchProfile(session.user.id);
+        const isSameUser = currentUserId === session.user.id;
+        currentUserId = session.user.id;
+        // Stabilize user reference on token refresh to avoid re-triggering data fetches
+        if (!isSameUser) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        }
       } else {
+        currentUserId = null;
         setUser(null);
         setProfile(null);
       }

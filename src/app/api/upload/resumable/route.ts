@@ -3,6 +3,7 @@ import { getDriveClient } from '@/lib/drive';
 
 export async function POST(req: Request) {
   try {
+    const origin = req.headers.get('origin') || '';
     const { fileName, contentType, fileSize, jobId, subfolderName } = await req.json();
 
     const drive = await getDriveClient();
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json; charset=UTF-8',
         'X-Upload-Content-Type': contentType,
         'X-Upload-Content-Length': fileSize.toString(),
+        ...(origin && { 'Origin': origin }),
       },
       body: JSON.stringify({
         name: fileName,

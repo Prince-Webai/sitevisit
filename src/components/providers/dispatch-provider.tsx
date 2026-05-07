@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { jobService } from '@/lib/supabase/service';
 import { useAuth } from '@/components/providers/auth-provider';
 import type { Job, StaffLocation, Profile } from '@/lib/types';
@@ -24,14 +24,16 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const initializedRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     if (!user || !profile) {
       setLoading(false);
       return;
     }
-    
-    setLoading(true);
+
+    // Only show the full-page spinner on the very first load
+    if (!initializedRef.current) setLoading(true);
     setError(null);
     
     try {
@@ -46,8 +48,8 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
 
       setJobs(jobsData || []);
       setStaffProfiles((profilesData as Profile[]) || []);
-      
       setStaffLocations(staffLocData || []);
+      initializedRef.current = true;
     } catch (err) {
       console.error('Failed to load dispatch data:', err);
       setError('Failed to load data. Please try again.');

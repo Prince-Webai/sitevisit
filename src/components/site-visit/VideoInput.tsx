@@ -101,7 +101,7 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId, sub
           'Content-Range': `bytes */${totalSize}`,
         }
       });
-      
+
       // Google Drive returns 200 or 201 with metadata when finished
       const metadata = await finalRes.json();
       const driveFileId = metadata.id;
@@ -119,7 +119,15 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId, sub
 
       if (dbError) console.error('Supabase DB error:', dbError);
 
-      onUpload(driveFileId); // Return the Drive File ID
+      // 5. Make the file publicly readable and get a usable URL
+      const finalizeRes = await fetch('/api/upload/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId: driveFileId, fileType: file.type }),
+      });
+      const { url: driveUrl } = await finalizeRes.json();
+
+      onUpload(driveUrl);
       toast.success('Video uploaded to Google Drive!');
       
       setTimeout(() => {

@@ -1,73 +1,57 @@
 'use client';
 
-import { useState } from 'react';
 import { SiteVisitData } from '@/types/site-visit';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Phone, User, Calendar, Camera, Video, Ruler, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { MapPin, Phone, User, Calendar, Camera, Video, Ruler, Zap, CheckCircle2, Download, ExternalLink } from 'lucide-react';
+
+// Extract Drive file ID from various Drive URL formats or treat value as raw ID
+function getDriveFileId(urlOrId: string): string {
+  const pathMatch = urlOrId.match(/\/d\/([^/?]+)/);
+  if (pathMatch) return pathMatch[1];
+  const paramMatch = urlOrId.match(/[?&]id=([^&]+)/);
+  if (paramMatch) return paramMatch[1];
+  return urlOrId;
+}
 
 function VideoCard({ url, label }: { url: string; label: string }) {
-  const [failed, setFailed] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-
-  const handleDownload = async () => {
-    setDownloading(true);
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const contentType = res.headers.get('content-type')?.split(';')[0].trim() ?? '';
-      const extMap: Record<string, string> = {
-        'video/quicktime': 'mov',
-        'video/mp4': 'mp4',
-        'video/webm': 'webm',
-        'video/x-msvideo': 'avi',
-      };
-      const ext = extMap[contentType] ?? url.split('?')[0].split('.').pop() ?? 'mp4';
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `${label.replace(/\s+/g, '_').toLowerCase()}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-    } catch {
-      window.open(url, '_blank');
-    } finally {
-      setDownloading(false);
-    }
-  };
+  const fileId = getDriveFileId(url);
+  const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+  const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+  const openUrl = `https://drive.google.com/file/d/${fileId}/view`;
 
   return (
     <div className="space-y-2">
-      <div className="aspect-video relative rounded-lg border border-light-gray bg-black overflow-hidden shadow-md flex items-center justify-center">
-        {failed ? (
-          <div className="flex flex-col items-center gap-2 p-4 text-center">
-            <AlertTriangle className="w-8 h-8 text-yellow-400" />
-            <p className="text-white text-xs font-medium">Format not supported in browser</p>
-            <p className="text-white/60 text-[10px] text-center">Download and open with VLC or QuickTime</p>
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={downloading}
-              className="mt-1 px-3 py-1.5 bg-white text-charcoal text-[11px] font-bold rounded-md hover:bg-off-white transition-colors disabled:opacity-60"
-            >
-              {downloading ? 'Downloading…' : 'Download to view'}
-            </button>
-          </div>
-        ) : (
-          <video
-            controls
-            playsInline
-            className="w-full h-full object-contain"
-            onError={() => setFailed(true)}
-          >
-            <source src={url} type="video/mp4" />
-            <source src={url} type="video/webm" />
-          </video>
-        )}
+      <div className="aspect-video relative rounded-lg border border-light-gray bg-black overflow-hidden shadow-md">
+        <iframe
+          src={previewUrl}
+          allow="autoplay"
+          className="w-full h-full"
+          title={label}
+        />
       </div>
-      <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter truncate">{label}</p>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={openUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-mid-gray hover:text-charcoal flex items-center gap-0.5"
+          >
+            <ExternalLink className="w-3 h-3" />
+          </a>
+          <a
+            href={downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1"
+          >
+            <Download className="w-3 h-3" />
+            Download
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -143,34 +127,48 @@ export function SiteVisitReport({ data, date }: SiteVisitReportProps) {
       </Card>
 
       {/* 2. Perimeter Photos */}
-      <Card className="border-light-gray shadow-sm overflow-hidden">
-        <CardHeader className="bg-off-white/50 border-b border-light-gray py-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Camera className="w-4 h-4 text-primary" />
-            Perimeter & Site Photos
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {Object.entries(data.photos).map(([key, url]) => (
-              url && (
-                <div key={key} className="space-y-1.5">
-                  <div className="aspect-square relative rounded-lg border border-light-gray bg-off-white overflow-hidden shadow-inner group">
-                    <img 
-                      src={url} 
-                      alt={key} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                    />
+      {Object.values(data.photos).some(Boolean) && (
+        <Card className="border-light-gray shadow-sm overflow-hidden">
+          <CardHeader className="bg-off-white/50 border-b border-light-gray py-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Camera className="w-4 h-4 text-primary" />
+              Perimeter & Site Photos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {Object.entries(data.photos).map(([key, url]) => {
+                if (!url) return null;
+                const fileId = getDriveFileId(url);
+                const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                return (
+                  <div key={key} className="space-y-1.5">
+                    <div className="aspect-square relative rounded-lg border border-light-gray bg-off-white overflow-hidden shadow-inner group">
+                      <img
+                        src={url}
+                        alt={key}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <a
+                        href={downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-1.5 right-1.5 p-1 bg-black/50 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Download photo"
+                      >
+                        <Download className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter text-center truncate px-1">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </p>
                   </div>
-                  <p className="text-[10px] font-bold text-mid-gray uppercase tracking-tighter text-center truncate px-1">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
-                  </p>
-                </div>
-              )
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 3. Solar Space & Structure */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -234,27 +232,29 @@ export function SiteVisitReport({ data, date }: SiteVisitReportProps) {
       </div>
 
       {/* 4. Videos & Visual Analysis */}
-      <Card className="border-light-gray shadow-sm overflow-hidden">
-        <CardHeader className="bg-off-white/50 border-b border-light-gray py-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Video className="w-4 h-4 text-primary" />
-            Video Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(data.videos).map(([key, url]) =>
-              url ? (
-                <VideoCard
-                  key={key}
-                  url={url}
-                  label={key.replace(/([A-Z])/g, ' $1').trim()}
-                />
-              ) : null
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {Object.values(data.videos).some(Boolean) && (
+        <Card className="border-light-gray shadow-sm overflow-hidden">
+          <CardHeader className="bg-off-white/50 border-b border-light-gray py-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" />
+              Video Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {Object.entries(data.videos).map(([key, url]) =>
+                url ? (
+                  <VideoCard
+                    key={key}
+                    url={url}
+                    label={key.replace(/([A-Z])/g, ' $1').trim()}
+                  />
+                ) : null
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 5. Signature */}
       {data.signature && (

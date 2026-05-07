@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WeatherWidget } from '@/components/dashboard/weather-widget';
@@ -22,13 +22,14 @@ export default function DashboardPage() {
   const [jobs,           setJobs]           = useState<Job[]>([]);
   const [profiles,       setProfiles]       = useState<{ status?: string }[]>([]);
   const [dataLoading,    setDataLoading]    = useState(true);
+  const initializedRef = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!user || !profile) return;
-    
-    // Only set loading if not already true
-    setDataLoading(prev => prev ? true : true); // This still triggers warning if synchronous
-    
+
+    // Only show the full-page spinner on the very first load
+    if (!initializedRef.current) setDataLoading(true);
+
     try {
       const supabase = createClient();
       const [jobsData, { data: profilesData }] = await Promise.all([
@@ -37,6 +38,7 @@ export default function DashboardPage() {
       ]);
       setJobs(jobsData);
       setProfiles(profilesData ?? []);
+      initializedRef.current = true;
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {

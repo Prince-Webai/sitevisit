@@ -27,6 +27,11 @@ import { siteVisitService } from '@/lib/supabase/site-visit-service';
 import { jobService } from '@/lib/supabase/service';
 import type { SiteVisitData } from '@/types/site-visit';
 
+interface SiteVisitFormProps {
+  jobId?: string;
+  onSuccess?: () => void;
+}
+
 const STEPS = [
   { id: 1, title: 'Client & Context', icon: User },
   { id: 2, title: 'Perimeter Photos', icon: Camera },
@@ -44,7 +49,7 @@ function getDraftKey(jobId?: string) {
 const supabase = createClient();
 
 export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreLoading, setIsPreLoading] = useState(!!jobId);
@@ -377,13 +382,13 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
               {currentStep === 2 && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <PhotoInput label="House Front Photo" path="house/front" jobId={jobId} onUpload={(url) => setValue('photos.front', url)} value={watch('photos.front')} />
-                    <PhotoInput label="House Left Photo" path="house/left" jobId={jobId} onUpload={(url) => setValue('photos.left', url)} value={watch('photos.left')} />
-                    <PhotoInput label="House Right Photo" path="house/right" jobId={jobId} onUpload={(url) => setValue('photos.right', url)} value={watch('photos.right')} />
-                    <PhotoInput label="House Back Photo" path="house/back" jobId={jobId} onUpload={(url) => setValue('photos.back', url)} value={watch('photos.back')} />
+                    <PhotoInput label="House Front Photo" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.front', url)} value={watch('photos.front')} />
+                    <PhotoInput label="House Left Photo" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.left', url)} value={watch('photos.left')} />
+                    <PhotoInput label="House Right Photo" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.right', url)} value={watch('photos.right')} />
+                    <PhotoInput label="House Back Photo" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.back', url)} value={watch('photos.back')} />
                   </div>
                   <div className="pt-2">
-                    <PhotoInput label="Solar System Location" path="house/solar" jobId={jobId} onUpload={(url) => setValue('photos.solarSystemLocation', url)} value={watch('photos.solarSystemLocation')} />
+                    <PhotoInput label="Solar System Location" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.solarSystemLocation', url)} value={watch('photos.solarSystemLocation')} />
                   </div>
                 </div>
               )}
@@ -455,7 +460,7 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
                     </div>
                   </div>
                   {mountType === 'CUSTOM DESIGN' && (
-                    <PhotoInput label="Custom Structure Design" jobId={jobId} onUpload={(url) => setValue('photos.structureCustomDesign', url)} value={watch('photos.structureCustomDesign')} />
+                    <PhotoInput label="Custom Structure Design" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.structureCustomDesign', url)} value={watch('photos.structureCustomDesign')} />
                   )}
                   
                   <div className="flex items-center gap-3 p-4 bg-off-white rounded-xl border border-light-gray">
@@ -491,7 +496,7 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
                     </Select>
                   </div>
                   
-                  <PhotoInput label="Inverter Location Photo" jobId={jobId} onUpload={(url) => setValue('photos.inverter', url)} value={watch('photos.inverter')} />
+                  <PhotoInput label="Inverter Location Photo" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.inverter', url)} value={watch('photos.inverter')} />
                   <VideoInput 
                     label="Plant to Inverter Video" 
                     jobId={jobId} 
@@ -513,18 +518,18 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
               {currentStep === 5 && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <PhotoInput label="Engineer Photo / Selfie" jobId={jobId} onUpload={(url) => setValue('photos.engineer', url)} value={watch('photos.engineer')} />
-                    <PhotoInput label="Client Photo" jobId={jobId} onUpload={(url) => setValue('photos.client', url)} value={watch('photos.client')} />
+                    <PhotoInput label="Engineer Photo / Selfie" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.engineer', url)} value={watch('photos.engineer')} />
+                    <PhotoInput label="Client Photo" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.client', url)} value={watch('photos.client')} />
                   </div>
-                  <PhotoInput label="Location of ACDB and DCDB Earthing" jobId={jobId} onUpload={(url) => setValue('photos.acdbDcdb', url)} value={watch('photos.acdbDcdb')} />
-                  <VideoInput 
-                    label="Lightning Arrestor Earthing Location" 
-                    jobId={jobId} 
+                  <PhotoInput label="Location of ACDB and DCDB Earthing" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.acdbDcdb', url)} value={watch('photos.acdbDcdb')} />
+                  <VideoInput
+                    label="Lightning Arrestor Earthing Location"
+                    jobId={jobId}
                     subfolderName={watch('clientPhone')}
-                    onUpload={(url) => setValue('videos.lightningArrestorEarthing', url)} 
-                    value={watch('videos.lightningArrestorEarthing')} 
+                    onUpload={(url) => setValue('videos.lightningArrestorEarthing', url)}
+                    value={watch('videos.lightningArrestorEarthing')}
                   />
-                  <PhotoInput label="Road Access Photo" jobId={jobId} onUpload={(url) => setValue('photos.roadAccess', url)} value={watch('photos.roadAccess')} />
+                  <PhotoInput label="Road Access Photo" jobId={jobId} subfolderName={watch('clientPhone')} onUpload={(url) => setValue('photos.roadAccess', url)} value={watch('photos.roadAccess')} />
                 </div>
               )}
 

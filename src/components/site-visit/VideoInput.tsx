@@ -12,6 +12,7 @@ interface VideoInputProps {
   value?: string;
   path?: string;
   jobId?: string;
+  subfolderName?: string;
 }
 
 const supabase = createClient();
@@ -19,7 +20,7 @@ const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
 const MAX_VIDEO_MB = 250;
 const MAX_VIDEO_BYTES = MAX_VIDEO_MB * 1024 * 1024;
 
-export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: VideoInputProps) {
+export function VideoInput({ label, onUpload, value, path = 'videos', jobId, subfolderName }: VideoInputProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
@@ -58,7 +59,8 @@ export function VideoInput({ label, onUpload, value, path = 'videos', jobId }: V
           fileName: file.name,
           contentType: file.type,
           fileSize: file.size,
-          jobId
+          jobId,
+          subfolderName
         }),
       });
 

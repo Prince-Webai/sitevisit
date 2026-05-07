@@ -3,7 +3,7 @@ import { getDriveClient } from '@/lib/drive';
 
 export async function POST(req: Request) {
   try {
-    const { fileName, contentType, fileSize, jobId } = await req.json();
+    const { fileName, contentType, fileSize, jobId, subfolderName } = await req.json();
 
     const drive = await getDriveClient();
     const auth = (drive.context._options.auth as any);
@@ -11,6 +11,36 @@ export async function POST(req: Request) {
 
     if (!token) {
       throw new Error('Failed to retrieve access token - Check your GOOGLE_REFRESH_TOKEN');
+    }
+
+    const PARENT_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID!;
+    let targetFolderId = PARENT_FOLDER_ID;
+
+    // 1. Handle Subfolder Creation if requested
+    if (subfolderName) {
+      const folderName = subfolderName.trim() || 'unnamed-visit';
+      
+      // Search for existing folder with this name
+      const listRes = await drive.files.list({
+        q: `name = '${folderName.replace(/'/g, "\\'")}' and '${PARENT_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (listRes.data.files && listRes.data.files.length > 0) {
+        targetFolderId = listRes.data.files[0].id!;
+      } else {
+        // Create new folder
+        const createRes = await drive.files.create({
+          requestBody: {
+            name: folderName,
+            mimeType: 'application/vnd.google-apps.folder',
+            parents: [PARENT_FOLDER_ID],
+          },
+          fields: 'id',
+        });
+        targetFolderId = createRes.data.id!;
+      }
     }
 
     const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
@@ -23,7 +53,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         name: fileName,
-        parents: [process.env.GOOGLE_DRIVE_FOLDER_ID!],
+        parents: [targetFolderId],
         properties: {
           jobId: jobId || 'unassigned',
         }

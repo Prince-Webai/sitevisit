@@ -424,7 +424,14 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
                       </SelectContent>
                     </Select>
                   </div>
-                  <VideoInput label="Shadow Analysis (Video/Panorama)" path="videos/shadow" jobId={jobId} onUpload={(url) => setValue('videos.shadowAnalysis', url)} value={watch('videos.shadowAnalysis')} />
+                  <VideoInput 
+                    label="Shadow Analysis (Video/Panorama)" 
+                    path="videos/shadow" 
+                    jobId={jobId} 
+                    subfolderName={watch('clientPhone')}
+                    onUpload={(url) => setValue('videos.shadowAnalysis', url)} 
+                    value={watch('videos.shadowAnalysis')} 
+                  />
                 </div>
               )}
 
@@ -485,8 +492,20 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
                   </div>
                   
                   <PhotoInput label="Inverter Location Photo" jobId={jobId} onUpload={(url) => setValue('photos.inverter', url)} value={watch('photos.inverter')} />
-                  <VideoInput label="Plant to Inverter Video" jobId={jobId} onUpload={(url) => setValue('videos.plantToInverter', url)} value={watch('videos.plantToInverter')} />
-                  <VideoInput label="Inverter to Earthing Video" jobId={jobId} onUpload={(url) => setValue('videos.inverterToEarthing', url)} value={watch('videos.inverterToEarthing')} />
+                  <VideoInput 
+                    label="Plant to Inverter Video" 
+                    jobId={jobId} 
+                    subfolderName={watch('clientPhone')}
+                    onUpload={(url) => setValue('videos.plantToInverter', url)} 
+                    value={watch('videos.plantToInverter')} 
+                  />
+                  <VideoInput 
+                    label="Inverter to Earthing Video" 
+                    jobId={jobId} 
+                    subfolderName={watch('clientPhone')}
+                    onUpload={(url) => setValue('videos.inverterToEarthing', url)} 
+                    value={watch('videos.inverterToEarthing')} 
+                  />
                 </div>
               )}
 
@@ -498,7 +517,13 @@ export function SiteVisitForm({ jobId, onSuccess }: SiteVisitFormProps) {
                     <PhotoInput label="Client Photo" jobId={jobId} onUpload={(url) => setValue('photos.client', url)} value={watch('photos.client')} />
                   </div>
                   <PhotoInput label="Location of ACDB and DCDB Earthing" jobId={jobId} onUpload={(url) => setValue('photos.acdbDcdb', url)} value={watch('photos.acdbDcdb')} />
-                  <VideoInput label="Lightning Arrestor Earthing Location" jobId={jobId} onUpload={(url) => setValue('videos.lightningArrestorEarthing', url)} value={watch('videos.lightningArrestorEarthing')} />
+                  <VideoInput 
+                    label="Lightning Arrestor Earthing Location" 
+                    jobId={jobId} 
+                    subfolderName={watch('clientPhone')}
+                    onUpload={(url) => setValue('videos.lightningArrestorEarthing', url)} 
+                    value={watch('videos.lightningArrestorEarthing')} 
+                  />
                   <PhotoInput label="Road Access Photo" jobId={jobId} onUpload={(url) => setValue('photos.roadAccess', url)} value={watch('photos.roadAccess')} />
                 </div>
               )}

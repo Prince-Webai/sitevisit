@@ -6,34 +6,11 @@ export async function POST(req: Request) {
     const { fileName, contentType, fileSize, jobId } = await req.json();
 
     const drive = await getDriveClient();
-
-    // 1. Initial request to get the resumable session URL
-    const response = await drive.files.create({
-      requestBody: {
-        name: fileName,
-        parents: [process.env.GOOGLE_DRIVE_FOLDER_ID!],
-        appProperties: {
-          jobId: jobId || 'unassigned',
-        }
-      },
-      media: {
-        mimeType: contentType,
-      },
-      fields: 'id',
-    }, {
-      // This is the trick for resumable uploads in the Node SDK
-      onUploadProgress: (evt) => {}, // Just to trigger resumable logic in some versions
-    });
-
-    // Wait, the Node SDK doesn't easily expose the session URL for the frontend.
-    // It's better to manually perform the first POST to get the Location header
-    // but use the SDK for the auth token.
-
     const auth = (drive.context._options.auth as any);
     const { token } = await auth.getAccessToken();
 
     if (!token) {
-      throw new Error('Failed to retrieve access token');
+      throw new Error('Failed to retrieve access token - Check your GOOGLE_REFRESH_TOKEN');
     }
 
     const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
